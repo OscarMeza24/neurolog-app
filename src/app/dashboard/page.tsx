@@ -3,7 +3,6 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,23 +16,18 @@ import {
   Users, 
   BookOpen, 
   TrendingUp, 
-  Calendar, 
   Heart,
   AlertCircle,
-  Clock,
   Eye,
   Plus,
   BarChart3,
-  Bell,
   Activity,
-  Target,
-  Award,
   ChevronRight,
-  MoreHorizontal
 } from 'lucide-react';
 import Link from 'next/link';
-import { format, isToday, isYesterday, startOfWeek, endOfWeek } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Profile } from '@/types';
 
 // ================================================================
 // INTERFACES Y TIPOS
@@ -400,14 +394,21 @@ function RecentLogs({ logs, loading }: RecentLogsProps) {
     </div>
   );
 }
-
-// ================================================================
 // COMPONENTE PRINCIPAL DEL DASHBOARD
 // ================================================================
 
+interface UserMetadata {
+  full_name?: string;
+  [key: string]: any;
+}
+
+interface UserProfile extends Profile {
+  user_metadata?: UserMetadata;
+}
+
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const { children, loading: childrenLoading, stats: childrenStats } = useChildren();
+  const { user } = useAuth() as { user: UserProfile | null };
+  const { children, loading: childrenLoading } = useChildren();
   const { logs, loading: logsLoading, stats } = useLogs();
 
   const greeting = () => {

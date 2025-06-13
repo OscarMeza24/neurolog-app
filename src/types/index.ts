@@ -330,6 +330,8 @@ export interface DashboardStats {
   active_categories: number;
   pending_reviews: number;
   follow_ups_due: number;
+  avg_mood_score?: number;
+  last_log_date?: string | null;
 }
 
 // ================================================================
