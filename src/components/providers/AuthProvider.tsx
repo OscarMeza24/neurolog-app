@@ -1,25 +1,21 @@
 // src/components/providers/AuthProvider.tsx
-// AuthProvider CORREGIDO - Soluciona el problema del nombre que se oculta
-
 'use client';
 
-import React, { 
+import { 
   createContext, 
-  useContext, 
-  useEffect, 
   useState, 
   ReactNode, 
   useRef, 
-  useCallback,
-  useMemo 
+  useCallback, 
+  useEffect,
+  useContext
 } from 'react';
-import { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase';
 import type { Profile, UserRole } from '@/types';
 
-// ================================================================
-// TIPOS DEL CONTEXTO
-// ================================================================
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
 interface AuthContextType {
   user: Profile | null;
@@ -37,57 +33,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ================================================================
-// PROVIDER PROPS
-// ================================================================
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-// ================================================================
-// AUTH PROVIDER COMPONENT - VERSIÓN CORREGIDA
-// ================================================================
-
 export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
-  const [user, setUser] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  
-  //  USAR useRef PARA MANTENER REFERENCIAS ESTABLES
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
   
-  //  REF PARA CONTROLAR INICIALIZACIÓN Y MONTAJE
   const initializedRef = useRef(false);
   const mountedRef = useRef(true);
   const authSubscriptionRef = useRef<any>(null);
 
-  // ================================================================
-  // FUNCIONES HELPER ESTABILIZADAS CON useCallback
-  // ================================================================
+  const [user, setUser] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-  /**
-   *  FETCH PROFILE - MEJORADO CON MEJOR MANEJO DE ERRORES
-   */
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     try {
       console.log('🔍 Fetching profile for user:', userId);
       
-      //  CAMBIO: .maybeSingle() en lugar de .single()
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // ← ESTO ELIMINA EL ERROR 406
+        .maybeSingle();
 
       if (error) {
         console.error('❌ Error fetching profile:', error);
         return null;
       }
 
-      //  Si no existe el perfil, crearlo automáticamente
       if (!data) {
         console.log('ℹ️ Profile not found, creating new profile...');
         
@@ -121,7 +94,6 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
           console.log('✅ Profile created successfully:', newProfile.full_name);
           return newProfile as Profile;
         }
-        
         return null;
       }
 
@@ -133,17 +105,13 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     }
   }, [supabase]);
 
-  /**
-   *  CHECK ADMIN STATUS - ESTABILIZADA
-   */
   const checkAdminStatus = useCallback(async (userId: string): Promise<boolean> => {
     try {
-      //  CAMBIO: .maybeSingle() aquí también
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
-        .maybeSingle(); // ← ESTO TAMBIÉN PREVIENE ERRORES
+        .maybeSingle();
 
       if (error) {
         console.warn('⚠️ Could not check admin status:', error);
@@ -162,9 +130,6 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     }
   }, [supabase]);
 
-  /**
-   *  UPDATE LAST LOGIN - ESTABILIZADA
-   */
   const updateLastLogin = useCallback(async (userId: string): Promise<void> => {
     try {
       await supabase
@@ -175,10 +140,6 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
       console.warn('⚠️ Could not update last login:', err);
     }
   }, [supabase]);
-
-  // ================================================================
-  // FUNCIONES DE AUTENTICACIÓN ESTABILIZADAS
-  // ================================================================
 
   const signIn = useCallback(async (email: string, password: string): Promise<void> => {
     try {
@@ -191,8 +152,6 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
       });
 
       if (error) throw error;
-      
-      // El perfil se cargará automáticamente por el listener
     } catch (err: any) {
       console.error('❌ Sign in error:', err);
       setError(err.message || 'Error al iniciar sesión');
@@ -202,12 +161,7 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     }
   }, [supabase]);
 
-  const signUp = useCallback(async (
-    email: string, 
-    password: string, 
-    fullName: string, 
-    role: UserRole
-  ): Promise<void> => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string, role: UserRole): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -218,7 +172,7 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
         options: {
           data: {
             full_name: fullName,
-            role: role,
+            role,
           },
         },
       });
@@ -236,11 +190,8 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   const signOut = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-
-      //  LIMPIAR ESTADO INMEDIATAMENTE
       setUser(null);
       setIsAdmin(false);
       setError(null);
@@ -254,71 +205,119 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   }, [supabase]);
 
   const updateProfile = useCallback(async (updates: Partial<Profile>): Promise<void> => {
-    if (!user) throw new Error('No user logged in');
-
     try {
-      setLoading(true);
-      setError(null);
+      if (!user) {
+        throw new Error('No user found');
+      }
 
       const { error } = await supabase
         .from('profiles')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(updates)
         .eq('id', user.id);
 
       if (error) throw error;
 
-      //  ACTUALIZAR ESTADO LOCAL INMEDIATAMENTE
-      setUser(prev => prev ? { ...prev, ...updates } : null);
+      setUser(prev => prev && { ...prev, ...updates });
     } catch (err: any) {
-      console.error('❌ Update profile error:', err);
-      setError(err.message || 'Error al actualizar perfil');
+      console.error('❌ Error updating profile:', err);
+      setError(err.message || 'Error al actualizar el perfil');
       throw err;
-    } finally {
-      setLoading(false);
     }
-  }, [user, supabase]);
+  }, [supabase]);
 
   const resetPassword = useCallback(async (email: string): Promise<void> => {
     try {
-      setError(null);
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
+      await supabase.auth.resetPasswordForEmail(email);
     } catch (err: any) {
-      console.error('❌ Reset password error:', err);
-      setError(err.message || 'Error al enviar email de recuperación');
+      console.error('❌ Error resetting password:', err);
+      setError(err.message || 'Error al restablecer la contraseña');
       throw err;
     }
   }, [supabase]);
 
   const refreshUser = useCallback(async (): Promise<void> => {
-    if (!user) return;
-
     try {
-      const profile = await fetchProfile(user.id);
-      if (profile && mountedRef.current) {
-        setUser(profile);
-        
-        const adminStatus = await checkAdminStatus(user.id);
-        if (mountedRef.current) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        const profile = await fetchProfile(data.session.user.id);
+        if (profile) {
+          setUser(profile);
+          const adminStatus = await checkAdminStatus(data.session.user.id);
           setIsAdmin(adminStatus);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Error refreshing user:', err);
+      setError(err.message || 'Error al refrescar el usuario');
+      throw err;
     }
-  }, [user, fetchProfile, checkAdminStatus]);
+  }, [supabase, fetchProfile, checkAdminStatus]);
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-  // ================================================================
-  // EFECTO PRINCIPAL - INICIALIZACIÓN UNA SOLA VEZ
-  // ================================================================
+  const setupAuthListener = useCallback(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mountedRef.current) return;
+        
+        console.log('🔄 Auth state changed:', event);
+        
+        try {
+          switch (event) {
+            case 'SIGNED_IN':
+              if (session?.user) {
+                console.log('✅ User signed in, fetching profile...');
+                setLoading(true);
+                
+                await updateLastLogin(session.user.id);
+                
+                const profile = await fetchProfile(session.user.id);
+                if (profile && mountedRef.current) {
+                  setUser(profile);
+                  const adminStatus = await checkAdminStatus(session.user.id);
+                  if (mountedRef.current) {
+                    setIsAdmin(adminStatus);
+                  }
+                }
+              }
+              break;
+            
+            case 'SIGNED_OUT':
+              if (mountedRef.current) {
+                setUser(null);
+                setIsAdmin(false);
+                setError(null);
+              }
+              break;
+            
+            case 'TOKEN_REFRESHED':
+              if (session?.user) {
+                console.log('🔄 Token refreshed, maintaining user state');
+              }
+              break;
+          }
+        } catch (err) {
+          console.error('❌ Error handling auth state change:', err);
+          if (mountedRef.current) {
+            setError('Error en el cambio de estado de autenticación');
+          }
+        } finally {
+          if (mountedRef.current) {
+            setLoading(false);
+          }
+        }
+      }
+    );
+    
+    authSubscriptionRef.current = subscription;
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, mountedRef, setLoading, setUser, setIsAdmin, setError, fetchProfile, checkAdminStatus, updateLastLogin]);
 
   useEffect(() => {
-    //  PREVENIR MÚLTIPLES INICIALIZACIONES
     if (initializedRef.current) return;
     
     initializedRef.current = true;
@@ -326,131 +325,34 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
 
     console.log('🚀 Initializing AuthProvider (ONE TIME ONLY)...');
 
-    /**
-     *  FUNCIÓN DE INICIALIZACIÓN ÚNICA
-     */
-    const initializeAuth = async (): Promise<void> => {
-      try {
-        console.log('🔍 Getting initial session...');
-        
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user && mountedRef.current) {
-          console.log('✅ Session found, fetching profile...');
-          
-          await updateLastLogin(session.user.id);
-          
-          const profile = await fetchProfile(session.user.id);
-          
-          if (profile && mountedRef.current) {
-            setUser(profile);
-            
-            const adminStatus = await checkAdminStatus(session.user.id);
-            if (mountedRef.current) {
-              setIsAdmin(adminStatus);
-            }
-          }
-        } else {
-          console.log('ℹ️ No active session found');
-        }
-      } catch (err) {
-        console.error('❌ Error during initialization:', err);
-        if (mountedRef.current) {
-          setError('Error al cargar la sesión');
-        }
-      } finally {
-        if (mountedRef.current) {
-          setLoading(false);
+    const initializeAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id);
+        if (profile) {
+          setUser(profile);
+          const adminStatus = await checkAdminStatus(session.user.id);
+          setIsAdmin(adminStatus);
         }
       }
-    };
 
-    /**
-     *  LISTENER DE AUTH MEJORADO - UNA SOLA SUBSCRIPCIÓN
-     */
-    const setupAuthListener = () => {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (!mountedRef.current) return;
+      const unsubscribe = setupAuthListener();
 
-          console.log('🔄 Auth state changed:', event);
-
-          try {
-            if (event === 'SIGNED_IN' && session?.user) {
-              console.log('✅ User signed in, fetching profile...');
-              setLoading(true);
-              
-              await updateLastLogin(session.user.id);
-              
-              const profile = await fetchProfile(session.user.id);
-              if (profile && mountedRef.current) {
-                setUser(profile);
-                
-                const adminStatus = await checkAdminStatus(session.user.id);
-                if (mountedRef.current) {
-                  setIsAdmin(adminStatus);
-                }
-              }
-            } else if (event === 'SIGNED_OUT') {
-              console.log('👋 User signed out');
-              if (mountedRef.current) {
-                setUser(null);
-                setIsAdmin(false);
-                setError(null);
-              }
-            } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-              console.log('🔄 Token refreshed, maintaining user state');
-              // No necesitamos recargar el perfil en token refresh
-              // El usuario ya está cargado y el token se renovó automáticamente
-            }
-          } catch (err) {
-            console.error('❌ Error handling auth state change:', err);
-            if (mountedRef.current) {
-              setError('Error en el cambio de estado de autenticación');
-            }
-          } finally {
-            if (mountedRef.current) {
-              setLoading(false);
-            }
-          }
+      return () => {
+        console.log('🧹 Cleaning up AuthProvider...');
+        mountedRef.current = false;
+        
+        if (unsubscribe) {
+          unsubscribe();
+          authSubscriptionRef.current = null;
         }
-      );
-
-      authSubscriptionRef.current = subscription;
-      return subscription;
+      };
     };
 
-    //  INICIALIZAR TODO
     initializeAuth();
-    setupAuthListener();
-
-    //  CLEANUP FUNCTION
-    return () => {
-      console.log('🧹 Cleaning up AuthProvider...');
-      mountedRef.current = false;
-      
-      if (authSubscriptionRef.current) {
-        authSubscriptionRef.current.unsubscribe();
-        authSubscriptionRef.current = null;
-      }
-    };
-  }, []); //  DEPENDENCIAS VACÍAS - SOLO EJECUTAR UNA VEZ
-
-  // ================================================================
-  // CLEANUP ON UNMOUNT
-  // ================================================================
-  
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
   }, []);
 
-  // ================================================================
-  // CONTEXT VALUE MEMOIZADO PARA EVITAR RE-RENDERS INNECESARIOS
-  // ================================================================
-
-  const contextValue = useMemo<AuthContextType>(() => ({
+  const contextValue = {
     user,
     loading,
     error,
@@ -462,19 +364,7 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     resetPassword,
     refreshUser,
     clearError
-  }), [
-    user,
-    loading,
-    error,
-    isAdmin,
-    signIn,
-    signUp,
-    signOut,
-    updateProfile,
-    resetPassword,
-    refreshUser,
-    clearError
-  ]);
+  };
 
   return (
     <AuthContext.Provider value={contextValue}>
@@ -483,14 +373,10 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   );
 }
 
-// ================================================================
-// HOOK PERSONALIZADO
-// ================================================================
-
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
