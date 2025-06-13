@@ -5,6 +5,42 @@
 -- Borra todo y crea desde cero según últimas actualizaciones
 
 -- ================================================================
+-- 0. CONSTANTES
+-- ================================================================
+DO $$
+BEGIN
+    -- Roles de usuario
+    CREATE OR REPLACE FUNCTION const_role_parent() RETURNS TEXT AS $$ SELECT 'parent'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_role_teacher() RETURNS TEXT AS $$ SELECT 'teacher'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_role_specialist() RETURNS TEXT AS $$ SELECT 'specialist'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_role_admin() RETURNS TEXT AS $$ SELECT 'admin'::TEXT $$ LANGUAGE SQL;
+    
+    -- Tipos de relación
+    CREATE OR REPLACE FUNCTION const_relationship_parent() RETURNS TEXT AS $$ SELECT 'parent'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_relationship_teacher() RETURNS TEXT AS $$ SELECT 'teacher'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_relationship_specialist() RETURNS TEXT AS $$ SELECT 'specialist'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_relationship_observer() RETURNS TEXT AS $$ SELECT 'observer'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_relationship_family() RETURNS TEXT AS $$ SELECT 'family'::TEXT $$ LANGUAGE SQL;
+    
+    -- Niveles de intensidad
+    CREATE OR REPLACE FUNCTION const_intensity_low() RETURNS TEXT AS $$ SELECT 'low'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_intensity_medium() RETURNS TEXT AS $$ SELECT 'medium'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_intensity_high() RETURNS TEXT AS $$ SELECT 'high'::TEXT $$ LANGUAGE SQL;
+    
+    -- Niveles de riesgo en auditoría
+    CREATE OR REPLACE FUNCTION const_risk_low() RETURNS TEXT AS $$ SELECT 'low'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_risk_medium() RETURNS TEXT AS $$ SELECT 'medium'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_risk_high() RETURNS TEXT AS $$ SELECT 'high'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_risk_critical() RETURNS TEXT AS $$ SELECT 'critical'::TEXT $$ LANGUAGE SQL;
+    
+    -- Operaciones en auditoría
+    CREATE OR REPLACE FUNCTION const_operation_insert() RETURNS TEXT AS $$ SELECT 'INSERT'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_operation_update() RETURNS TEXT AS $$ SELECT 'UPDATE'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_operation_delete() RETURNS TEXT AS $$ SELECT 'DELETE'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_operation_select() RETURNS TEXT $$ SELECT 'SELECT'::TEXT $$ LANGUAGE SQL;
+END $$;
+
+-- ================================================================
 -- 1. LIMPIAR TODO LO EXISTENTE
 -- ================================================================
 
@@ -51,7 +87,7 @@ CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT NOT NULL,
-  role TEXT CHECK (role IN ('parent', 'teacher', 'specialist', 'admin')) DEFAULT 'parent',
+  role TEXT CHECK (role IN (const_role_parent(), const_role_teacher(), const_role_specialist(), const_role_admin())) DEFAULT const_role_parent(),
   avatar_url TEXT,
   phone TEXT,
   is_active BOOLEAN DEFAULT TRUE,
@@ -106,7 +142,7 @@ CREATE TABLE user_child_relations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   child_id UUID REFERENCES children(id) ON DELETE CASCADE NOT NULL,
-  relationship_type TEXT CHECK (relationship_type IN ('parent', 'teacher', 'specialist', 'observer', 'family')) NOT NULL,
+  relationship_type TEXT CHECK (relationship_type IN (const_relationship_parent(), const_relationship_teacher(), const_relationship_specialist(), const_relationship_observer(), const_relationship_family())) NOT NULL,
   can_edit BOOLEAN DEFAULT FALSE,
   can_view BOOLEAN DEFAULT TRUE,
   can_export BOOLEAN DEFAULT FALSE,
@@ -130,7 +166,7 @@ CREATE TABLE daily_logs (
   title TEXT NOT NULL CHECK (length(trim(title)) >= 2),
   content TEXT NOT NULL,
   mood_score INTEGER CHECK (mood_score >= 1 AND mood_score <= 10),
-  intensity_level TEXT CHECK (intensity_level IN ('low', 'medium', 'high')) DEFAULT 'medium',
+  intensity_level TEXT CHECK (intensity_level IN (const_intensity_low(), const_intensity_medium(), const_intensity_high())) DEFAULT const_intensity_medium(),
   logged_by UUID REFERENCES profiles(id) NOT NULL,
   log_date DATE DEFAULT CURRENT_DATE,
   is_private BOOLEAN DEFAULT FALSE,
@@ -154,7 +190,7 @@ CREATE TABLE daily_logs (
 CREATE TABLE audit_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   table_name TEXT NOT NULL,
-  operation TEXT CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE', 'SELECT')) NOT NULL,
+  operation TEXT CHECK (operation IN (const_operation_insert(), const_operation_update(), const_operation_delete(), const_operation_select())) NOT NULL,
   record_id TEXT,
   user_id UUID REFERENCES profiles(id),
   user_role TEXT,
@@ -164,7 +200,7 @@ CREATE TABLE audit_logs (
   ip_address INET,
   user_agent TEXT,
   session_id TEXT,
-  risk_level TEXT CHECK (risk_level IN ('low', 'medium', 'high', 'critical')) DEFAULT 'low',
+  risk_level TEXT CHECK (risk_level IN (const_risk_low(), const_risk_medium(), const_risk_high(), const_risk_critical())) DEFAULT const_risk_low(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
