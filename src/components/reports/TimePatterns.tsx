@@ -5,22 +5,44 @@
 
 'use client';
 
-import React from 'react'; 
+import React from 'react';
+import type { LucideProps } from 'lucide-react'; 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Calendar, TrendingUp, TrendingDown, Minus, Brain, Target, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface TimePatternsProps {
-  logs: any[];
+  logs: {
+    created_at: string;
+  }[];
 }
 
 interface CorrelationAnalysisProps {
-  logs: any[];
+  logs: {
+    created_at: string;
+    mood_score?: number;
+    intensity_level?: 'low' | 'medium' | 'high';
+    category_name?: string;
+  }[];
 }
 
 interface AdvancedInsightsProps {
-  logs: any[];
+  logs: {
+    created_at: string;
+    mood_score?: number;
+    intensity_level?: 'low' | 'medium' | 'high';
+    category_name?: string;
+  }[];
 }
+
+interface Insight {
+  type: 'success' | 'warning' | 'info';
+  icon: React.ForwardRefExoticComponent<LucideProps & React.RefAttributes<SVGSVGElement>>;
+  className?: string;
+  title: string;
+  description: string;
+  recommendation: string;
+};
 
 // ================================================================
 // TIMEPATTERNS COMPONENT
@@ -124,7 +146,7 @@ export function TimePatterns({ logs }: TimePatternsProps) {
 
 export function CorrelationAnalysis({ logs }: CorrelationAnalysisProps) {
   // Función helper para calcular correlación
-  function calculateCorrelation(data: any[], field1: string, field2Func: (item: any) => number): number {
+  const calculateCorrelation = (data: { [key: string]: any }[], field1: string, field2Func: (item: { [key: string]: any }) => number): number => {
     if (data.length < 2) return 0;
     
     const x = data.map(item => item[field1]);
@@ -243,79 +265,83 @@ export function CorrelationAnalysis({ logs }: CorrelationAnalysisProps) {
     </div>
   );
 }
-
-// ================================================================
 // ADVANCED INSIGHTS COMPONENT
 // ================================================================
 
 export function AdvancedInsights({ logs }: AdvancedInsightsProps) {
-  const generateInsights = () => {
-    const insights = [];
+  const generateFrequencyInsight = () => {
+    if (logs.length === 0) return null;
     
-    // Análisis de frecuencia
-    if (logs.length > 0) {
-      const daysWithLogs = new Set(logs.map(log => 
-        new Date(log.created_at).toDateString()
-      )).size;
-      
-      const totalDays = 30; // últimos 30 días
-      const frequency = (daysWithLogs / totalDays) * 100;
-      
-      insights.push({
-        type: frequency > 80 ? 'success' : frequency > 50 ? 'warning' : 'info',
-        icon: frequency > 80 ? CheckCircle : frequency > 50 ? Target : AlertTriangle,
-        title: 'Consistencia en el registro',
-        description: `Registros en ${daysWithLogs} de ${totalDays} días (${frequency.toFixed(0)}%)`,
-        recommendation: frequency < 50 
-          ? 'Intenta mantener registros más regulares para obtener mejores insights'
-          : frequency < 80
-          ? 'Buen ritmo de registro, mantén la consistencia'
-          : 'Excelente consistencia en los registros'
-      });
-    }
+    const daysWithLogs = new Set(logs.map(log => 
+      new Date(log.created_at).toDateString()
+    )).size;
+    
+    const totalDays = 30;
+    const frequency = (daysWithLogs / totalDays) * 100;
+    
+    return {
+      type: frequency > 80 ? 'success' : frequency > 50 ? 'warning' : 'info',
+      icon: frequency > 80 ? CheckCircle : frequency > 50 ? Target : AlertTriangle,
+      title: 'Consistencia en el registro',
+      description: `Registros en ${daysWithLogs} de ${totalDays} días (${frequency.toFixed(0)}%)`,
+      recommendation: frequency < 50 
+        ? 'Intenta mantener registros más regulares para obtener mejores insights'
+        : frequency < 80
+        ? 'Buen ritmo de registro, mantén la consistencia'
+        : 'Excelente consistencia en los registros'
+    };
+  };
 
-    // Análisis de estado de ánimo
+  const generateMoodInsight = () => {
     const moodLogs = logs.filter(log => log.mood_score);
-    if (moodLogs.length > 5) {
-      const avgMood = moodLogs.reduce((sum, log) => sum + log.mood_score, 0) / moodLogs.length;
-      const recent = moodLogs.slice(0, 7);
-      const recentAvg = recent.reduce((sum, log) => sum + log.mood_score, 0) / recent.length;
-      
-      const trend = recentAvg - avgMood;
-      
-      insights.push({
-        type: trend > 0.5 ? 'success' : trend < -0.5 ? 'warning' : 'info',
-        icon: Brain,
-        title: 'Tendencia del estado de ánimo',
-        description: `Promedio general: ${avgMood.toFixed(1)}/5, últimos 7 días: ${recentAvg.toFixed(1)}/5`,
-        recommendation: trend > 0.5 
-          ? 'Tendencia positiva en el estado de ánimo reciente'
-          : trend < -0.5
-          ? 'Considera revisar factores que puedan estar afectando el bienestar'
-          : 'Estado de ánimo estable'
-      });
-    }
+    if (moodLogs.length <= 5) return null;
 
-    // Análisis de categorías
+    const avgMood = moodLogs.reduce((sum, log) => sum + (log.mood_score || 0), 0) / moodLogs.length;
+    const recent = moodLogs.slice(0, 7);
+    const recentAvg = recent.reduce((sum, log) => sum + (log.mood_score || 0), 0) / recent.length;
+    const trend = recentAvg - avgMood;
+
+    return {
+      type: trend > 0.5 ? 'success' : trend < -0.5 ? 'warning' : 'info',
+      icon: Brain,
+      title: 'Tendencia del estado de ánimo',
+      description: `Promedio general: ${avgMood.toFixed(1)}/5, últimos 7 días: ${recentAvg.toFixed(1)}/5`,
+      recommendation: trend > 0.5 
+        ? 'Tendencia positiva en el estado de ánimo reciente'
+        : trend < -0.5
+        ? 'Considera revisar factores que puedan estar afectando el bienestar'
+        : 'Estado de ánimo estable'
+    };
+  };
+
+  const generateCategoryInsight = () => {
     const categoryCount = logs.reduce((acc, log) => {
       if (log.category_name) {
         acc[log.category_name] = (acc[log.category_name] || 0) + 1;
       }
       return acc;
     }, {} as Record<string, number>);
-
+    
     const categories = Object.entries(categoryCount);
-    if (categories.length > 0) {
-      const mostUsedCategory = categories.sort(([,a], [,b]) => b - a)[0];
-      
-      insights.push({
-        type: 'info',
-        icon: Target,
-        title: 'Área de mayor atención',
-        description: `"${mostUsedCategory[0]}" representa ${((mostUsedCategory[1] / logs.length) * 100).toFixed(0)}% de los registros`,
-        recommendation: 'Esta categoría requiere mayor atención y seguimiento'
-      });
-    }
+    if (categories.length === 0) return null;
+
+    const mostUsedCategory = categories.sort(([,a], [,b]) => b - a)[0];
+    
+    return {
+      type: 'info',
+      icon: Target,
+      title: 'Área de mayor atención',
+      description: `"${mostUsedCategory[0]}" representa ${((mostUsedCategory[1] / logs.length) * 100).toFixed(0)}% de los registros`,
+      recommendation: 'Esta categoría requiere mayor atención y seguimiento'
+    };
+  };
+
+  const generateInsights = (): Insight[] => {
+    const insights = [
+      generateFrequencyInsight(),
+      generateMoodInsight(),
+      generateCategoryInsight(),
+    ].filter((insight): insight is Insight => insight !== null);
 
     return insights;
   };

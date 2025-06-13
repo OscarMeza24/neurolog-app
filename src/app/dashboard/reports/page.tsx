@@ -387,7 +387,14 @@ export default function ReportsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CorrelationAnalysis logs={filteredLogs} />
+                <CorrelationAnalysis 
+                  logs={filteredLogs.map(log => ({
+                    created_at: log.created_at,
+                    mood_score: log.mood_score ?? undefined,
+                    intensity_level: log.intensity_level,
+                    category_name: log.category?.name
+                  }))}
+                />
               </CardContent>
             </Card>
           </div>
@@ -403,7 +410,14 @@ export default function ReportsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AdvancedInsights logs={filteredLogs} />
+              <AdvancedInsights 
+                logs={filteredLogs.map(log => ({
+                  created_at: log.created_at,
+                  mood_score: log.mood_score ?? undefined,
+                  intensity_level: log.intensity_level,
+                  category_name: log.category?.name
+                }))}
+              />
             </CardContent>
           </Card>
         </TabsContent>
