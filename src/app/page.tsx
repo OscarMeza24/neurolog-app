@@ -1,3 +1,5 @@
+'use client';
+
 // src/app/page.tsx
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
