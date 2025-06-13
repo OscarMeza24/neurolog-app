@@ -157,7 +157,7 @@ CREATE TABLE categories (
   description TEXT,
   color TEXT DEFAULT '#3B82F6',
   icon TEXT DEFAULT 'circle',
-  is_active BOOLEAN DEFAULT TRUE,
+  is_active status DEFAULT 'active'::status,
   sort_order INTEGER DEFAULT 0,
   created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -170,25 +170,13 @@ CREATE TABLE children (
   birth_date DATE,
   diagnosis TEXT,
   notes TEXT,
-  is_active BOOLEAN DEFAULT TRUE,
+  is_active status DEFAULT 'active'::status,
   avatar_url TEXT,
   emergency_contact JSONB DEFAULT '[]',
   medical_info JSONB DEFAULT '{}',
   educational_info JSONB DEFAULT '{}',
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'privacy_settings') THEN
-    CREATE TYPE privacy_settings AS (
-      share_with_specialists BOOLEAN,
-      share_progress_reports BOOLEAN,
-      allow_photo_sharing BOOLEAN,
-      data_retention_months INTEGER
-    );
-  END IF;
-END $$;
-  privacy_settings JSONB DEFAULT (
-    SELECT to_jsonb(row) 
-    FROM (VALUES (true, true, false, 36)) as v(share_with_specialists, share_progress_reports, allow_photo_sharing, data_retention_months)
+  privacy_settings privacy_settings DEFAULT (
+    SELECT row(true, true, false, 36)::privacy_settings
   ),
   created_by UUID REFERENCES profiles(id) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -208,7 +196,7 @@ CREATE TABLE user_child_relations (
   granted_by UUID REFERENCES profiles(id) NOT NULL,
   granted_at TIMESTAMPTZ DEFAULT NOW(),
   expires_at TIMESTAMPTZ,
-  is_active BOOLEAN DEFAULT TRUE,
+  is_active status DEFAULT 'active'::status,
   notes TEXT,
   notification_preferences JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -251,7 +239,7 @@ CREATE TABLE audit_logs (
   operation audit_operation NOT NULL,
   record_id TEXT,
   user_id UUID REFERENCES profiles(id),
-  user_role TEXT,
+  user_role user_role,
   old_values JSONB,
   new_values JSONB,
   changed_fields TEXT[],
@@ -263,7 +251,7 @@ CREATE TABLE audit_logs (
 );
 
 -- ================================================================
--- 3. CREAR ÍNDICES PARA PERFORMANCE
+-- 4. CREAR ÍNDICES PARA PERFORMANCE
 -- ================================================================
 
 -- Índices en profiles
@@ -293,7 +281,7 @@ CREATE INDEX idx_audit_table ON audit_logs(table_name);
 CREATE INDEX idx_audit_created ON audit_logs(created_at DESC);
 
 -- ================================================================
--- 4. CREAR FUNCIONES DE TRIGGERS
+-- 5. CREAR FUNCIONES DE TRIGGERS
 -- ================================================================
 
 -- Función para actualizar updated_at automáticamente
@@ -321,7 +309,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ================================================================
--- 5. CREAR TRIGGERS
+-- 6. CREAR TRIGGERS
 -- ================================================================
 
 -- Trigger para updated_at
@@ -347,7 +335,7 @@ CREATE TRIGGER on_auth_user_created
   EXECUTE FUNCTION handle_new_user();
 
 -- ================================================================
--- 6. CREAR FUNCIONES RPC
+-- 7. CREAR FUNCIONES RPC
 -- ================================================================
 
 -- Función para verificar acceso a niño
@@ -401,7 +389,7 @@ BEGIN
       'details', action_details,
       'timestamp', NOW()
     ),
-    'medium'
+    'medium'::risk_level
   );
 EXCEPTION
   WHEN OTHERS THEN
@@ -410,7 +398,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ================================================================
--- 7. CREAR VISTAS
+-- 8. CREAR VISTAS
 -- ================================================================
 
 -- Vista para niños accesibles por usuario
@@ -428,7 +416,7 @@ SELECT
 FROM children c
 JOIN profiles p ON c.created_by = p.id
 WHERE c.created_by = auth.uid()
-  AND c.is_active = true;
+  AND c.is_active = 'active'::status;
 
 -- Vista para estadísticas de logs por niño
 CREATE OR REPLACE VIEW child_log_statistics AS
@@ -449,7 +437,7 @@ WHERE c.created_by = auth.uid()
 GROUP BY c.id, c.name;
 
 -- ================================================================
--- 8. INSERTAR DATOS INICIALES
+-- 9. INSERTAR DATOS INICIALES
 -- ================================================================
 
 -- Categorías por defecto
@@ -466,7 +454,7 @@ INSERT INTO categories (name, description, color, icon, sort_order) VALUES
 ('Otros', 'Otros registros importantes', '#6B7280', 'more-horizontal', 10);
 
 -- ================================================================
--- 9. HABILITAR RLS Y CREAR POLÍTICAS SIMPLES
+-- 10. HABILITAR RLS Y CREAR POLÍTICAS SIMPLES
 -- ================================================================
 
 -- Habilitar RLS
@@ -480,23 +468,19 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 -- POLÍTICAS PARA PROFILES
 CREATE POLICY "Users can view own profile" ON profiles
   FOR SELECT USING (auth.uid() = id);
-
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
-
 CREATE POLICY "Users can insert own profile" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- POLÍTICAS PARA CHILDREN (SIMPLES, SIN RECURSIÓN)
 CREATE POLICY "Users can view own created children" ON children
   FOR SELECT USING (created_by = auth.uid());
-
 CREATE POLICY "Authenticated users can create children" ON children
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND 
     created_by = auth.uid()
   );
-
 CREATE POLICY "Creators can update own children" ON children
   FOR UPDATE USING (created_by = auth.uid())
   WITH CHECK (created_by = auth.uid());
@@ -504,7 +488,6 @@ CREATE POLICY "Creators can update own children" ON children
 -- POLÍTICAS PARA USER_CHILD_RELATIONS (SIMPLES)
 CREATE POLICY "Users can view own relations" ON user_child_relations
   FOR SELECT USING (user_id = auth.uid());
-
 CREATE POLICY "Users can create relations for own children" ON user_child_relations
   FOR INSERT WITH CHECK (
     granted_by = auth.uid() AND
@@ -524,7 +507,6 @@ CREATE POLICY "Users can view logs of own children" ON daily_logs
         AND created_by = auth.uid()
     )
   );
-
 CREATE POLICY "Users can create logs for own children" ON daily_logs
   FOR INSERT WITH CHECK (
     logged_by = auth.uid() AND
@@ -534,21 +516,20 @@ CREATE POLICY "Users can create logs for own children" ON daily_logs
         AND created_by = auth.uid()
     )
   );
-
 CREATE POLICY "Users can update own logs" ON daily_logs
   FOR UPDATE USING (logged_by = auth.uid())
   WITH CHECK (logged_by = auth.uid());
 
 -- POLÍTICAS PARA CATEGORIES
 CREATE POLICY "Authenticated users can view categories" ON categories
-  FOR SELECT USING (auth.uid() IS NOT NULL AND is_active = true);
+  FOR SELECT USING (auth.uid() IS NOT NULL AND is_active = 'active'::status);
 
 -- POLÍTICAS PARA AUDIT_LOGS
 CREATE POLICY "System can insert audit logs" ON audit_logs
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
 -- ================================================================
--- 10. FUNCIÓN DE VERIFICACIÓN
+-- 11. FUNCIÓN DE VERIFICACIÓN
 -- ================================================================
 
 CREATE OR REPLACE FUNCTION verify_neurolog_setup()
@@ -584,55 +565,10 @@ BEGIN
   
   -- Contar categorías
   SELECT COUNT(*) INTO category_count
-  FROM categories WHERE is_active = true;
+  FROM categories WHERE is_active = 'active'::status;
   
   result := result || 'Categorías: ' || category_count || '/10' || E'\n';
-  
-  -- Verificar RLS
-  IF (SELECT COUNT(*) FROM pg_class c 
-      JOIN pg_namespace n ON n.oid = c.relnamespace 
-      WHERE n.nspname = 'public' 
-        AND c.relname = 'children' 
-        AND c.relrowsecurity = true) > 0 THEN
-    result := result || 'RLS: ✅ Habilitado' || E'\n';
-  ELSE
-    result := result || 'RLS: ❌ Deshabilitado' || E'\n';
-  END IF;
-  
-  result := result || E'\n🎉 BASE DE DATOS NEUROLOG CONFIGURADA COMPLETAMENTE';
   
   RETURN result;
 END;
 $$ LANGUAGE plpgsql;
-
--- ================================================================
--- 11. EJECUTAR VERIFICACIÓN FINAL
--- ================================================================
-
-SELECT verify_neurolog_setup();
-
--- ================================================================
--- 12. MENSAJE FINAL
--- ================================================================
-
-DO $$
-BEGIN
-  RAISE NOTICE '🎉 ¡BASE DE DATOS NEUROLOG CREADA EXITOSAMENTE!';
-  RAISE NOTICE '===============================================';
-  RAISE NOTICE 'Todas las tablas, funciones, vistas y políticas han sido creadas.';
-  RAISE NOTICE 'La base de datos está lista para usar.';
-  RAISE NOTICE '';
-  RAISE NOTICE 'FUNCIONALIDADES INCLUIDAS:';
-  RAISE NOTICE '✅ Gestión de usuarios (profiles)';
-  RAISE NOTICE '✅ Gestión de niños (children)';
-  RAISE NOTICE '✅ Relaciones usuario-niño (user_child_relations)';
-  RAISE NOTICE '✅ Registros diarios (daily_logs)';
-  RAISE NOTICE '✅ Categorías predefinidas (categories)';
-  RAISE NOTICE '✅ Sistema de auditoría (audit_logs)';
-  RAISE NOTICE '✅ Políticas RLS funcionales';
-  RAISE NOTICE '✅ Funciones RPC necesarias';
-  RAISE NOTICE '✅ Vistas optimizadas';
-  RAISE NOTICE '✅ Índices para performance';
-  RAISE NOTICE '';
-  RAISE NOTICE 'PRÓXIMO PASO: Probar la aplicación NeuroLog';
-END $$;
