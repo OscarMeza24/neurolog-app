@@ -37,7 +37,7 @@ BEGIN
     CREATE OR REPLACE FUNCTION const_operation_insert() RETURNS TEXT AS $$ SELECT 'INSERT'::TEXT $$ LANGUAGE SQL;
     CREATE OR REPLACE FUNCTION const_operation_update() RETURNS TEXT AS $$ SELECT 'UPDATE'::TEXT $$ LANGUAGE SQL;
     CREATE OR REPLACE FUNCTION const_operation_delete() RETURNS TEXT AS $$ SELECT 'DELETE'::TEXT $$ LANGUAGE SQL;
-    CREATE OR REPLACE FUNCTION const_operation_select() RETURNS TEXT $$ SELECT 'SELECT'::TEXT $$ LANGUAGE SQL;
+    CREATE OR REPLACE FUNCTION const_operation_select() RETURNS TEXT AS $$ SELECT 'SELECT'::TEXT $$ LANGUAGE SQL;
 END $$;
 
 -- ================================================================
