@@ -291,8 +291,8 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION user_can_access_child(child_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM children 
+  RETURN (
+    SELECT COUNT(*) > 0 FROM children 
     WHERE id = child_uuid 
       AND created_by = auth.uid()
   );
@@ -303,8 +303,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION user_can_edit_child(child_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM children 
+  RETURN (
+    SELECT COUNT(*) > 0 FROM children 
     WHERE id = child_uuid 
       AND created_by = auth.uid()
   );
