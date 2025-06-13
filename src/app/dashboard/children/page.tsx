@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Select,
   SelectContent,
@@ -14,39 +14,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useChildren } from '@/hooks/use-children';
 import type { ChildWithRelation, ChildFilters, RelationshipType } from '@/types';
-import { 
-  PlusIcon, 
-  SearchIcon, 
-  FilterIcon,
-  MoreVerticalIcon,
+import { PlusIcon, 
   EditIcon,
   EyeIcon,
   UserPlusIcon,
-  CalendarIcon,
-  MapPinIcon,
-  HeartIcon,
-  TrendingUpIcon,
-  DownloadIcon,
-  UsersIcon,
-  BookOpenIcon,
   RefreshCwIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { ViewModeToggle } from '@/components/dashboard/ViewModeToggle';
+import { ChildrenStats } from '@/components/dashboard/ChildrenStats';
+import { useChildHandlers } from '@/hooks/use-child-handlers';
 
 // ================================================================
-// COMPONENTES AUXILIARES
+// INTERFACES
 // ================================================================
 
 interface ChildCardProps {
@@ -56,8 +40,28 @@ interface ChildCardProps {
   onManageUsers: (child: ChildWithRelation) => void;
 }
 
+interface FiltersCardProps {
+  filters: ChildFilters;
+  onFiltersChange: (filters: ChildFilters) => void;
+}
+
+interface ChildrenListProps {
+  loading: boolean;
+  error: string | null;
+  filteredChildren: ChildWithRelation[];
+  handleEdit: (child: ChildWithRelation) => void;
+  handleViewDetails: (child: ChildWithRelation) => void;
+  handleManageUsers: (child: ChildWithRelation) => void;
+  onFiltersChange: (filters: ChildFilters) => void;
+}
+
+// ================================================================
+// COMPONENTES AUXILIARES
+// ================================================================
+
 function ChildCard({ child, onEdit, onViewDetails, onManageUsers }: ChildCardProps) {
-  const calculateAge = (birthDate: string) => {
+  const calculateAge = (birthDate?: string | null) => {
+    if (!birthDate) return null;
     const birth = new Date(birthDate);
     const today = new Date();
     const age = today.getFullYear() - birth.getFullYear();
@@ -96,86 +100,68 @@ function ChildCard({ child, onEdit, onViewDetails, onManageUsers }: ChildCardPro
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <Avatar className="h-12 w-12">
-              <AvatarImage src={child.avatar_url || undefined} />
-              <AvatarFallback className="bg-blue-100 text-blue-600">
-                {child.name.charAt(0).toUpperCase()}
-              </AvatarFallback>
+              <AvatarFallback>{child.name.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
-            <div>
-              <h3 className="font-semibold text-lg">{child.name}</h3>
+            <div className="space-y-1">
+              <CardTitle className="text-lg font-semibold">
+                {child.name}
+              </CardTitle>
               <div className="flex items-center space-x-2">
-                <Badge 
-                  variant="secondary" 
-                  className={getRelationshipColor(child.relationship_type)}
-                >
-                  {getRelationshipLabel(child.relationship_type)}
+                <Badge variant="outline" className="px-2 py-1">
+                  {child.is_active ? 'Activo' : 'Inactivo'}
                 </Badge>
-                {child.can_edit && (
-                  <Badge variant="outline" className="text-xs">
-                    Editor
+                {child.birth_date && calculateAge(child.birth_date) !== null && (
+                  <Badge variant="outline" className="px-2 py-1">
+                    {calculateAge(child.birth_date)} años
                   </Badge>
                 )}
               </div>
             </div>
           </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVerticalIcon className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onViewDetails(child)}>
-                <EyeIcon className="mr-2 h-4 w-4" />
-                Ver detalles
-              </DropdownMenuItem>
-              {child.can_edit && (
-                <DropdownMenuItem onClick={() => onEdit(child)}>
-                  <EditIcon className="mr-2 h-4 w-4" />
-                  Editar
-                </DropdownMenuItem>
-              )}
-              {child.can_invite_others && (
-                <DropdownMenuItem onClick={() => onManageUsers(child)}>
-                  <UserPlusIcon className="mr-2 h-4 w-4" />
-                  Gestionar usuarios
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEdit(child)}
+              className="hover:bg-blue-50"
+            >
+              <EditIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onViewDetails(child)}
+              className="hover:bg-blue-50"
+            >
+              <EyeIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onManageUsers(child)}
+              className="hover:bg-blue-50"
+            >
+              <UserPlusIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Información básica */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          {child.birth_date && (
-            <div className="flex items-center space-x-2">
-              <CalendarIcon className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-600">
-                {calculateAge(child.birth_date)} años
-              </span>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Diagnóstico</h3>
+            <p className="text-gray-600">{child.diagnosis || 'Sin diagnóstico'}</p>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Relación</h3>
+            <div className="flex flex-wrap gap-2">
+              <Badge
+                variant="outline"
+                className={`${getRelationshipColor(child.relationship_type)} px-2 py-1`}
+              >
+                {getRelationshipLabel(child.relationship_type)}
+              </Badge>
             </div>
-          )}
-          
-          {child.diagnosis && (
-            <div className="flex items-center space-x-2">
-              <HeartIcon className="h-4 w-4 text-gray-400" />
-              <span className="text-gray-600 truncate" title={child.diagnosis}>
-                {child.diagnosis}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Estadísticas rápidas */}
-        <div className="flex justify-between items-center pt-2 border-t">
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-900">Registros</p>
-            <p className="text-xs text-gray-500">Este mes</p>
           </div>
           <div className="text-center">
             <p className="text-sm font-medium text-gray-900">Última actividad</p>
@@ -189,56 +175,72 @@ function ChildCard({ child, onEdit, onViewDetails, onManageUsers }: ChildCardPro
   );
 }
 
-interface FiltersCardProps {
-  filters: ChildFilters;
-  onFiltersChange: (filters: ChildFilters) => void;
-}
-
 function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center text-base">
-          <FilterIcon className="h-4 w-4 mr-2" />
-          Filtros
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Filtros</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onFiltersChange({})}
+          >
+            <RefreshCwIcon className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Búsqueda por nombre */}
+        <div className="space-y-4">
+          {/* Búsqueda */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Buscar por nombre</label>
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Nombre del niño..."
-                value={filters.search || ''}
-                onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-                className="pl-10"
-              />
-            </div>
+            <label className="text-sm font-medium">Buscar</label>
+            <Input
+              placeholder="Nombre o diagnóstico"
+              value={filters.search || ''}
+              onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
+            />
           </div>
 
-          {/* Relación */}
-          <Select 
-            value={filters.relationship_type || 'all'} 
-            onValueChange={(value) => onFiltersChange({ 
-              ...filters, 
-              relationship_type: value === 'all' ? undefined : value as RelationshipType 
-            })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Tipo de relación" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas las relaciones</SelectItem>
-              <SelectItem value="parent">Padre/Madre</SelectItem>
-              <SelectItem value="teacher">Docente</SelectItem>
-              <SelectItem value="specialist">Especialista</SelectItem>
-              <SelectItem value="observer">Observador</SelectItem>
-              <SelectItem value="family">Familia</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Estado */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Estado</label>
+            <Select
+              value={filters.is_active?.toString() || ''}
+              onValueChange={(value) => 
+                onFiltersChange({ ...filters, is_active: value === 'true' ? true : false })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los estados" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Activos</SelectItem>
+                <SelectItem value="false">Inactivos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Tipo de relación */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Tipo de relación</label>
+            <Select
+              value={filters.relationship_type || ''}
+              onValueChange={(value) => onFiltersChange({ ...filters, relationship_type: value as RelationshipType })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="parent">Padre/Madre</SelectItem>
+                <SelectItem value="teacher">Docente</SelectItem>
+                <SelectItem value="specialist">Especialista</SelectItem>
+                <SelectItem value="observer">Observador</SelectItem>
+                <SelectItem value="family">Familia</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Rango de edad */}
           <div className="space-y-2">
@@ -261,11 +263,117 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
   );
 }
 
-// ================================================================
-// COMPONENTE PRINCIPAL
-// ================================================================
+function ChildrenList({
+  loading, 
+  error, 
+  filteredChildren, 
+  handleEdit, 
+  handleViewDetails, 
+  handleManageUsers,
+  onFiltersChange
+}: ChildrenListProps) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(6)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardHeader>
+              <div className="flex items-center space-x-4">
+                <div className="rounded-full bg-gray-200 h-12 w-12"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  <div className="h-3 bg-gray-200 rounded w-16"></div>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
-export default function ChildrenPage() {
+  if (error) {
+    return (
+      <Card className="border-red-200 bg-red-50">
+        <CardContent className="text-center py-12">
+          <p className="text-red-600 mb-4">Error al cargar los niños: {error}</p>
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            <RefreshCwIcon className="h-4 w-4 mr-2" />
+            Reintentar
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (filteredChildren.length === 0) {
+    return (
+      <Card>
+        <CardContent className="text-center py-12">
+          <UserPlusIcon className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No se encontraron niños
+          </h3>
+          <p className="text-gray-600 mb-6">
+            No hay niños que coincidan con los filtros seleccionados
+          </p>
+          <Button 
+            variant="outline"
+            onClick={() => onFiltersChange({})}
+          >
+            Limpiar Filtros
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <ViewModeToggle initialMode="grid" onModeChange={() => {}} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredChildren.map((child) => (
+          <ChildCard
+            key={child.id}
+            child={child}
+            onEdit={handleEdit}
+            onViewDetails={handleViewDetails}
+            onManageUsers={handleManageUsers}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Mis Niños</h1>
+        <p className="text-gray-600">
+          Gestiona y visualiza el progreso de los niños bajo tu cuidado
+        </p>
+      </div>
+      
+      <div className="flex space-x-3">
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+          <RefreshCwIcon className="h-4 w-4 mr-2" />
+          Actualizar
+        </Button>
+        
+        <Button asChild>
+          <Link href="/dashboard/children/new">
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Crear Niño
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ChildrenPage() {
   const { user } = useAuth();
   const { children, loading, error, filterChildren } = useChildren({ 
     includeInactive: false,
@@ -273,31 +381,17 @@ export default function ChildrenPage() {
   });
   
   const [filters, setFilters] = useState<ChildFilters>({});
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const { handleEdit, handleViewDetails, handleManageUsers } = useChildHandlers();
 
-  // Aplicar filtros
   const filteredChildren = useMemo(() => {
     return filterChildren(filters);
   }, [children, filters, filterChildren]);
-
-  // Handlers
-  const handleEdit = (child: ChildWithRelation) => {
-    window.location.href = `/dashboard/children/${child.id}/edit`;
-  };
-
-  const handleViewDetails = (child: ChildWithRelation) => {
-    window.location.href = `/dashboard/children/${child.id}`;
-  };
-
-  const handleManageUsers = (child: ChildWithRelation) => {
-    window.location.href = `/dashboard/children/${child.id}/users`;
-  };
 
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <UsersIcon className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+          <UserPlusIcon className="mx-auto h-12 w-12 text-gray-300 mb-4" />
           <p className="text-gray-500">Cargando...</p>
         </div>
       </div>
@@ -306,191 +400,20 @@ export default function ChildrenPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header con botón de crear niño */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Mis Niños</h1>
-          <p className="text-gray-600">
-            Gestiona y visualiza el progreso de los niños bajo tu cuidado
-          </p>
-        </div>
-        
-        <div className="flex space-x-3">
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-            <RefreshCwIcon className="h-4 w-4 mr-2" />
-            Actualizar
-          </Button>
-          
-          <Button asChild>
-            <Link href="/dashboard/children/new">
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Crear Niño
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* Estadísticas rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <UsersIcon className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Niños</p>
-                <p className="text-2xl font-bold">{children.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <BookOpenIcon className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Activos</p>
-                <p className="text-2xl font-bold">
-                  {children.filter(c => c.is_active).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <EditIcon className="h-8 w-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Editables</p>
-                <p className="text-2xl font-bold">
-                  {children.filter(c => c.can_edit).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <TrendingUpIcon className="h-8 w-8 text-orange-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Con Diagnóstico</p>
-                <p className="text-2xl font-bold">
-                  {children.filter(c => c.diagnosis).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtros */}
+      <Header />
+      <ChildrenStats children={children} />
       <FiltersCard filters={filters} onFiltersChange={setFilters} />
-
-      {/* Lista/Grid de niños */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader>
-                <div className="flex items-center space-x-4">
-                  <div className="rounded-full bg-gray-200 h-12 w-12"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded w-24"></div>
-                    <div className="h-3 bg-gray-200 rounded w-16"></div>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      ) : error ? (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="text-center py-12">
-            <p className="text-red-600 mb-4">Error al cargar los niños: {error}</p>
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              <RefreshCwIcon className="h-4 w-4 mr-2" />
-              Reintentar
-            </Button>
-          </CardContent>
-        </Card>
-      ) : filteredChildren.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <UsersIcon className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            {children.length === 0 ? (
-              <>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No hay niños registrados
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Comienza agregando el primer niño para empezar el seguimiento
-                </p>
-                <Button asChild>
-                  <Link href="/dashboard/children/new">
-                    <PlusIcon className="mr-2 h-4 w-4" />
-                    Agregar Primer Niño
-                  </Link>
-                </Button>
-              </>
-            ) : (
-              <>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No se encontraron niños
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  No hay niños que coincidan con los filtros seleccionados
-                </p>
-                <Button 
-                  variant="outline"
-                  onClick={() => setFilters({})}
-                >
-                  Limpiar Filtros
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* View Mode Toggle */}
-          <div className="flex justify-end">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">Vista:</span>
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                Tarjetas
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                Lista
-              </Button>
-            </div>
-          </div>
-
-          {/* Children Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredChildren.map((child) => (
-              <ChildCard
-                key={child.id}
-                child={child}
-                onEdit={handleEdit}
-                onViewDetails={handleViewDetails}
-                onManageUsers={handleManageUsers}
-              />
-            ))}
-          </div>
-        </>
-      )}
+      <ChildrenList 
+        loading={loading} 
+        error={error} 
+        filteredChildren={filteredChildren} 
+        handleEdit={handleEdit} 
+        handleViewDetails={handleViewDetails} 
+        handleManageUsers={handleManageUsers} 
+        onFiltersChange={setFilters}
+      />
     </div>
   );
 }
+
+export default ChildrenPage;
