@@ -345,7 +345,7 @@ BEGIN
       'details', action_details,
       'timestamp', NOW()
     ),
-    'medium'
+    const_risk_medium()
   );
 EXCEPTION
   WHEN OTHERS THEN
