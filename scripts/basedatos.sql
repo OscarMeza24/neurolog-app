@@ -90,12 +90,21 @@ CREATE TABLE children (
   emergency_contact JSONB DEFAULT '[]',
   medical_info JSONB DEFAULT '{}',
   educational_info JSONB DEFAULT '{}',
-  privacy_settings JSONB DEFAULT '{
-    "share_with_specialists": true,
-    "share_progress_reports": true,
-    "allow_photo_sharing": false,
-    "data_retention_months": 36
-  }',
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'privacy_settings') THEN
+    CREATE TYPE privacy_settings AS (
+      share_with_specialists BOOLEAN,
+      share_progress_reports BOOLEAN,
+      allow_photo_sharing BOOLEAN,
+      data_retention_months INTEGER
+    );
+  END IF;
+END $$;
+  privacy_settings JSONB DEFAULT (
+    SELECT to_jsonb(row) 
+    FROM (VALUES (true, true, false, 36)) as v(share_with_specialists, share_progress_reports, allow_photo_sharing, data_retention_months)
+  ),
   created_by UUID REFERENCES profiles(id) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
