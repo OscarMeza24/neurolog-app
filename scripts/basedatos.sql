@@ -323,6 +323,8 @@ CREATE OR REPLACE FUNCTION audit_sensitive_access(
   action_details TEXT DEFAULT NULL
 )
 RETURNS VOID AS $$
+DECLARE
+  v_error_message TEXT;
 BEGIN
   INSERT INTO audit_logs (
     table_name,
@@ -347,7 +349,31 @@ BEGIN
   );
 EXCEPTION
   WHEN OTHERS THEN
-    NULL; -- No fallar por errores de auditoría
+    GET STACKED DIAGNOSTICS v_error_message = MESSAGE_TEXT;
+    RAISE WARNING 'Error en auditoría: %', v_error_message;
+    -- Crear un registro de auditoría de error
+    INSERT INTO audit_logs (
+      table_name,
+      operation,
+      record_id,
+      user_id,
+      user_role,
+      new_values,
+      risk_level
+    ) VALUES (
+      'sensitive_access',
+      'ERROR',
+      resource_id,
+      auth.uid(),
+      (SELECT role FROM profiles WHERE id = auth.uid()),
+      jsonb_build_object(
+        'error_message', v_error_message,
+        'action_type', action_type,
+        'details', action_details,
+        'timestamp', NOW()
+      ),
+      'high'
+    );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
