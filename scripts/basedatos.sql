@@ -5,7 +5,92 @@
 -- Borra todo y crea desde cero según últimas actualizaciones
 
 -- ================================================================
--- 1. LIMPIAR TODO LO EXISTENTE
+-- 1. DECLARACIÓN DE CONSTANTES
+-- ================================================================
+DO $$
+BEGIN
+  -- Constantes para roles de usuario
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
+    CREATE TYPE user_role AS ENUM (
+      'parent',
+      'teacher',
+      'specialist',
+      'admin'
+    );
+  END IF;
+
+  -- Constantes para tipos de relación
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'relationship_type') THEN
+    CREATE TYPE relationship_type AS ENUM (
+      'parent',
+      'teacher',
+      'specialist',
+      'observer',
+      'family'
+    );
+  END IF;
+
+  -- Constantes para estados
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status') THEN
+    CREATE TYPE status AS ENUM (
+      'active',
+      'inactive'
+    );
+  END IF;
+
+  -- Constantes para niveles de intensidad
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'intensity_level') THEN
+    CREATE TYPE intensity_level AS ENUM (
+      'low',
+      'medium',
+      'high'
+    );
+  END IF;
+
+  -- Constantes para operaciones de auditoría
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'audit_operation') THEN
+    CREATE TYPE audit_operation AS ENUM (
+      'INSERT',
+      'UPDATE',
+      'DELETE',
+      'SELECT'
+    );
+  END IF;
+
+  -- Constantes para niveles de riesgo
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'risk_level') THEN
+    CREATE TYPE risk_level AS ENUM (
+      'low',
+      'medium',
+      'high',
+      'critical'
+    );
+  END IF;
+
+  -- Constantes para zonas horarias
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'timezone') THEN
+    CREATE TYPE timezone AS ENUM (
+      'America/Guayaquil',
+      'America/New_York',
+      'America/Los_Angeles',
+      'Europe/Paris',
+      'Asia/Tokyo'
+    );
+  END IF;
+
+  -- Constantes para configuración de privacidad
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'privacy_settings') THEN
+    CREATE TYPE privacy_settings AS (
+      share_with_specialists BOOLEAN,
+      share_progress_reports BOOLEAN,
+      allow_photo_sharing BOOLEAN,
+      data_retention_months INTEGER
+    );
+  END IF;
+END $$;
+
+-- ================================================================
+-- 2. LIMPIAR TODO LO EXISTENTE
 -- ================================================================
 
 -- Deshabilitar RLS temporalmente
@@ -43,7 +128,7 @@ DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS profiles CASCADE;
 
 -- ================================================================
--- 2. CREAR TABLAS PRINCIPALES
+-- 3. CREAR TABLAS PRINCIPALES
 -- ================================================================
 
 -- TABLA: profiles (usuarios del sistema)
@@ -59,7 +144,7 @@ CREATE TABLE profiles (
   failed_login_attempts INTEGER DEFAULT 0,
   last_failed_login TIMESTAMPTZ,
   account_locked_until TIMESTAMPTZ,
-  timezone TEXT DEFAULT 'America/Guayaquil',
+  timezone timezone DEFAULT 'America/Guayaquil'::timezone,
   preferences JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -139,7 +224,7 @@ CREATE TABLE daily_logs (
   title TEXT NOT NULL CHECK (length(trim(title)) >= 2),
   content TEXT NOT NULL,
   mood_score INTEGER CHECK (mood_score >= 1 AND mood_score <= 10),
-  intensity_level TEXT CHECK (intensity_level IN ('low', 'medium', 'high')) DEFAULT 'medium',
+  intensity_level intensity_level DEFAULT 'medium'::intensity_level,
   logged_by UUID REFERENCES profiles(id) NOT NULL,
   log_date DATE DEFAULT CURRENT_DATE,
   is_private BOOLEAN DEFAULT FALSE,
@@ -332,7 +417,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE VIEW user_accessible_children AS
 SELECT 
   c.*,
-  'parent'::user_role as relationship_type,
+  'parent'::relationship_type as relationship_type,
   true as can_edit,
   true as can_view,
   true as can_export,
