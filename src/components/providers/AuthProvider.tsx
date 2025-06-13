@@ -257,6 +257,44 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     setError(null);
   }, []);
 
+  const handleSignedIn = useCallback(async (userId: string) => {
+    try {
+      setLoading(true);
+      await updateLastLogin(userId);
+      const profile = await fetchProfile(userId);
+      if (profile && mountedRef.current) {
+        setUser(profile);
+        const adminStatus = await checkAdminStatus(userId);
+        if (mountedRef.current) {
+          setIsAdmin(adminStatus);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error handling signed in state:', err);
+      if (mountedRef.current) {
+        setError('Error en el cambio de estado de autenticación');
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [mountedRef, setLoading, setUser, setIsAdmin, setError, fetchProfile, checkAdminStatus, updateLastLogin]);
+
+  const handleSignedOut = useCallback(() => {
+    if (mountedRef.current) {
+      setUser(null);
+      setIsAdmin(false);
+      setError(null);
+    }
+  }, [mountedRef, setUser, setIsAdmin, setError]);
+
+  const handleTokenRefreshed = useCallback((userId: string | undefined) => {
+    if (userId && mountedRef.current) {
+      console.log('🔄 Token refreshed, maintaining user state');
+    }
+  }, [mountedRef]);
+
   const setupAuthListener = useCallback(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -269,43 +307,22 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
             case 'SIGNED_IN':
               if (session?.user) {
                 console.log('✅ User signed in, fetching profile...');
-                setLoading(true);
-                
-                await updateLastLogin(session.user.id);
-                
-                const profile = await fetchProfile(session.user.id);
-                if (profile && mountedRef.current) {
-                  setUser(profile);
-                  const adminStatus = await checkAdminStatus(session.user.id);
-                  if (mountedRef.current) {
-                    setIsAdmin(adminStatus);
-                  }
-                }
+                await handleSignedIn(session.user.id);
               }
               break;
             
             case 'SIGNED_OUT':
-              if (mountedRef.current) {
-                setUser(null);
-                setIsAdmin(false);
-                setError(null);
-              }
+              handleSignedOut();
               break;
             
             case 'TOKEN_REFRESHED':
-              if (session?.user) {
-                console.log('🔄 Token refreshed, maintaining user state');
-              }
+              handleTokenRefreshed(session?.user?.id);
               break;
           }
         } catch (err) {
           console.error('❌ Error handling auth state change:', err);
           if (mountedRef.current) {
             setError('Error en el cambio de estado de autenticación');
-          }
-        } finally {
-          if (mountedRef.current) {
-            setLoading(false);
           }
         }
       }
@@ -315,7 +332,7 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase, mountedRef, setLoading, setUser, setIsAdmin, setError, fetchProfile, checkAdminStatus, updateLastLogin]);
+  }, [supabase, mountedRef, setError, handleSignedIn, handleSignedOut, handleTokenRefreshed]);
 
   useEffect(() => {
     if (initializedRef.current) return;
