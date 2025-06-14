@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { useChildren } from '@/hooks/use-children';
 import { useLogs } from '@/hooks/use-logs';
 import { TimePatterns, CorrelationAnalysis, AdvancedInsights } from '@/components/reports/TimePatterns';
@@ -173,25 +174,32 @@ export default function ReportsPage() {
             </div>
             
             <div>
-              <label className="text-sm font-medium mb-2 block">Período</label>
-              <DatePickerWithRange 
-                date={dateRange}
-                setDate={setDateRange}
-                className="w-full"
-              />
+              <div className="space-y-1">
+                <Label>Período</Label>
+                <DatePickerWithRange 
+                  date={dateRange}
+                  setDate={setDateRange}
+                  className="w-full"
+                />
+              </div>
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Categoría</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las categorías</SelectItem>
-                  {/* Aquí irían las categorías disponibles */}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1">
+                <Label>Categoría</Label>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={setSelectedCategory}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las categorías</SelectItem>
+                    {/* Aquí irían las categorías disponibles */}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardContent>
