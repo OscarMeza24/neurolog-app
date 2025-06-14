@@ -65,13 +65,27 @@ export default function LogDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Verificar permisos de edición usando el hook
+  const checkEditPermissions = useCallback(async () => {
+    if (log?.id) {
+      const canEdit = await canEditLog(log.id);
+      setLog(prev => prev ? { ...prev, can_edit: canEdit } : prev);
+    }
+  }, [log?.id, canEditLog]);
+
+  useEffect(() => {
+    checkEditPermissions();
+  }, [checkEditPermissions]);
+
+  const canReview = user?.role === 'specialist' && !log?.reviewed_by;
+  const canAddFeedback = user?.role === 'parent' || user?.role === 'teacher';
+
   useEffect(() => {
     if (!logId) {
       setError('ID de registro no válido');
       setIsLoading(false);
       return;
     }
-
     const loadLog = async () => {
       try {
         const foundLog = getLogById(logId);
@@ -86,7 +100,6 @@ export default function LogDetailPage() {
         setIsLoading(false);
       }
     };
-
     loadLog();
   }, [logId, getLogById]);
 
@@ -183,21 +196,6 @@ export default function LogDetailPage() {
       setIsLoading(false);
     }
   };
-
-  const canReview = user?.role === 'specialist' && !log.reviewed_by;
-  const canAddFeedback = user?.role === 'parent' || user?.role === 'teacher';
-
-  // Verificar permisos de edición usando el hook
-  const checkEditPermissions = useCallback(async () => {
-    if (log?.id) {
-      const canEdit = await canEditLog(log.id);
-      setLog(prev => prev ? { ...prev, can_edit: canEdit } : prev);
-    }
-  }, [log?.id, canEditLog]);
-
-  useEffect(() => {
-    checkEditPermissions();
-  }, [checkEditPermissions]);
 
   return (
     <div className="space-y-6">
