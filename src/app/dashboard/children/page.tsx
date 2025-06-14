@@ -150,7 +150,7 @@ function ChildCard({ child, onEdit, onViewDetails, onManageUsers }: ChildCardPro
         <div className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Diagnóstico</h3>
-            <p className="text-gray-600">{child.diagnosis || 'Sin diagnóstico'}</p>
+            <p className="text-gray-600">{child.diagnosis ?? 'Sin diagnóstico'}</p>
           </div>
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Relación</h3>
@@ -207,7 +207,7 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
           <div className="space-y-2">
             <label htmlFor="is_active" className="text-sm font-medium">Estado</label>
             <Select
-              value={filters.is_active?.toString() || ''}
+              value={filters.is_active?.toString() ?? ''}
               onValueChange={(value) => 
                 onFiltersChange({ ...filters, is_active: value === 'true' ? true : false })
               }
@@ -226,7 +226,7 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
           <div className="space-y-2">
             <label htmlFor="relationship_type" className="text-sm font-medium">Tipo de relación</label>
             <Select
-              value={filters.relationship_type || ''}
+              value={filters.relationship_type ?? ''}
               onValueChange={(value) => onFiltersChange({ ...filters, relationship_type: value as RelationshipType })}
             >
               <SelectTrigger>
@@ -252,7 +252,7 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
               placeholder="Años"
               min="0"
               max="25"
-              value={filters.max_age || ''}
+              value={filters.max_age ?? ''}
               onChange={(e) => onFiltersChange({ 
                 ...filters, 
                 max_age: e.target.value ? parseInt(e.target.value) : undefined 
