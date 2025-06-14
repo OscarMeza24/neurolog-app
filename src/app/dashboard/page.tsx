@@ -99,8 +99,8 @@ function QuickStats({ stats, loading }: QuickStatsProps) {
   if (loading) {
     return (
       <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, index) => (
-          <Card key={`quickstat-card-skeleton-${index}`} className="animate-pulse">
+        {statCards.map((stat) => (
+          <Card key={`quickstat-card-skeleton-${stat.title}`} className="animate-pulse">
             <CardContent className="p-3 sm:p-4 md:p-6">
               <div className="flex items-center justify-between space-x-2">
                 <div className="space-y-2 flex-1">
