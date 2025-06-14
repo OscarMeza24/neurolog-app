@@ -489,7 +489,7 @@ export default function LogDetailPage() {
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Niño</p>
                   <div className="flex items-center space-x-2 mt-1">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={log.child.avatar_url || ''} />
+                      <AvatarImage src={log.child.avatar_url ?? ''} />
                       <AvatarFallback className="text-xs">
                         {log.child.name?.charAt(0)}
                       </AvatarFallback>
