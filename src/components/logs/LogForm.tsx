@@ -203,7 +203,7 @@ function AttachmentsManager({ attachments, onChange, childId }: AttachmentsManag
         let type: LogAttachment['type'] = 'document';
         if (file.type.startsWith('image/')) type = 'image';
         newAttachments.push({
-          id: `${Date.now()}-${Math.random()}`,
+          id: crypto.randomUUID(),
           name: file.name,
           url,
           type,

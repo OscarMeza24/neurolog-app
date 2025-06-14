@@ -31,19 +31,22 @@ import type {
 import { 
   EditIcon,
   MoreVerticalIcon,
-  UserPlusIcon,
-  CalendarIcon,
-  BookOpenIcon,
-  TrendingUpIcon,
   DownloadIcon,
+  CalendarIcon,
   PlusIcon,
-  UsersIcon,
-  AlertCircleIcon,
+  UserPlusIcon,
+  EyeIcon,
   GraduationCapIcon,
+  UsersIcon,
   ClockIcon,
-  ArrowLeftIcon,
-  EyeIcon
+  AlertCircleIcon,
+  TrendingUpIcon,
+  BookOpenIcon,
+  ArrowLeftIcon
 } from 'lucide-react';
+import { ProgressChart } from '@/components/reports/ProgressChart';
+import { MoodTrendChart } from '@/components/reports/MoodTrendChart';
+import { CategoryDistribution } from '@/components/reports/CategoryDistribution';
 import { format, differenceInYears, subMonths, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -469,8 +472,51 @@ export default function ChildDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* TODO: Implementar gráficos de progreso */}
-              <p className="text-gray-500">Gráficos de progreso próximamente...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Gráfico de progreso general */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Progreso General</CardTitle>
+                    <CardDescription>
+                      Evolución del estado de ánimo y categorías
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ProgressChart data={logs} />
+                  </CardContent>
+                </Card>
+
+                {/* Tendencia del estado de ánimo */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tendencia del Estado de Ánimo</CardTitle>
+                    <CardDescription>
+                      Análisis temporal del bienestar emocional
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <MoodTrendChart
+                      data={logs.map(log => ({
+                        created_at: log.log_date,
+                        mood_score: log.mood_score
+                      }))}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Distribución por categorías */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Distribución por Categorías</CardTitle>
+                    <CardDescription>
+                      Frecuencia de registros por área
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <CategoryDistribution data={logs} />
+                  </CardContent>
+                </Card>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
