@@ -34,25 +34,25 @@ import { useChildHandlers } from '@/hooks/use-child-handlers';
 // ================================================================
 
 interface ChildCardProps {
-  child: ChildWithRelation;
-  onEdit: (child: ChildWithRelation) => void;
-  onViewDetails: (child: ChildWithRelation) => void;
-  onManageUsers: (child: ChildWithRelation) => void;
+  readonly child: ChildWithRelation;
+  readonly onEdit: (child: ChildWithRelation) => void;
+  readonly onViewDetails: (child: ChildWithRelation) => void;
+  readonly onManageUsers: (child: ChildWithRelation) => void;
 }
 
 interface FiltersCardProps {
-  filters: ChildFilters;
-  onFiltersChange: (filters: ChildFilters) => void;
+  readonly filters: ChildFilters;
+  readonly onFiltersChange: (filters: ChildFilters) => void;
 }
 
 interface ChildrenListProps {
-  loading: boolean;
-  error: string | null;
-  filteredChildren: ChildWithRelation[];
-  handleEdit: (child: ChildWithRelation) => void;
-  handleViewDetails: (child: ChildWithRelation) => void;
-  handleManageUsers: (child: ChildWithRelation) => void;
-  onFiltersChange: (filters: ChildFilters) => void;
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly filteredChildren: ChildWithRelation[];
+  readonly handleEdit: (child: ChildWithRelation) => void;
+  readonly handleViewDetails: (child: ChildWithRelation) => void;
+  readonly handleManageUsers: (child: ChildWithRelation) => void;
+  readonly onFiltersChange: (filters: ChildFilters) => void;
 }
 
 // ================================================================
