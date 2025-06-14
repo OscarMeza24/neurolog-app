@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,10 +27,9 @@ import {
 } from '@/components/ui/form';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useChildren } from '@/hooks/use-children';
-import { uploadFile, getPublicUrl, STORAGE_BUCKETS } from '@/lib/supabase';
-import type { Child, ChildInsert, ChildUpdate, EmergencyContact } from '@/types';
+import { uploadFile, STORAGE_BUCKETS } from '@/lib/supabase';
+import type { Child, ChildInsert, ChildUpdate } from '@/types';
 import { 
-  CalendarIcon, 
   ImageIcon, 
   PlusIcon, 
   TrashIcon, 
@@ -48,6 +47,7 @@ import { format } from 'date-fns';
 // ================================================================
 
 const emergencyContactSchema = z.object({
+  id: z.string(),
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   phone: z.string().min(10, 'El teléfono debe tener al menos 10 dígitos'),
   relationship: z.string().min(2, 'La relación es requerida'),
@@ -95,6 +95,14 @@ interface ChildFormProps {
   onCancel?: () => void;
 }
 
+interface EmergencyContact {
+  id: string;
+  name: string;
+  phone: string;
+  relationship: string;
+  is_primary: boolean;
+}
+
 interface EmergencyContactFormProps {
   contacts: EmergencyContact[];
   onChange: (contacts: EmergencyContact[]) => void;
@@ -120,8 +128,13 @@ interface PrivacySettingsFormProps {
 // ================================================================
 
 function EmergencyContactForm({ contacts, onChange }: EmergencyContactFormProps) {
+  const generateUniqueId = () => {
+    return `contact-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  };
+
   const addContact = () => {
     onChange([...contacts, {
+      id: generateUniqueId(),
       name: '',
       phone: '',
       relationship: '',
@@ -129,14 +142,14 @@ function EmergencyContactForm({ contacts, onChange }: EmergencyContactFormProps)
     }]);
   };
 
-  const removeContact = (index: number) => {
-    const newContacts = contacts.filter((_, i) => i !== index);
+  const removeContact = (id: string) => {
+    const newContacts = contacts.filter(contact => contact.id !== id);
     onChange(newContacts);
   };
 
-  const updateContact = (index: number, field: keyof EmergencyContact, value: any) => {
-    const newContacts = contacts.map((contact, i) => 
-      i === index ? { ...contact, [field]: value } : contact
+  const updateContact = (id: string, field: keyof EmergencyContact, value: any) => {
+    const newContacts = contacts.map(contact => 
+      contact.id === id ? { ...contact, [field]: value } : contact
     );
     onChange(newContacts);
   };
@@ -156,35 +169,35 @@ function EmergencyContactForm({ contacts, onChange }: EmergencyContactFormProps)
         </Button>
       </div>
 
-      {contacts.map((contact, index) => (
-        <Card key={index} className="p-4">
+      {contacts.map((contact) => (
+        <Card key={contact.id} className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor={`contact-name-${index}`}>Nombre</Label>
+              <Label htmlFor={`contact-name-${contact.id}`}>Nombre</Label>
               <Input
-                id={`contact-name-${index}`}
+                id={`contact-name-${contact.id}`}
                 value={contact.name}
-                onChange={(e) => updateContact(index, 'name', e.target.value)}
+                onChange={(e) => updateContact(contact.id, 'name', e.target.value)}
                 placeholder="Nombre completo"
               />
             </div>
             
             <div>
-              <Label htmlFor={`contact-phone-${index}`}>Teléfono</Label>
+              <Label htmlFor={`contact-phone-${contact.id}`}>Teléfono</Label>
               <Input
-                id={`contact-phone-${index}`}
+                id={`contact-phone-${contact.id}`}
                 value={contact.phone}
-                onChange={(e) => updateContact(index, 'phone', e.target.value)}
+                onChange={(e) => updateContact(contact.id, 'phone', e.target.value)}
                 placeholder="+1234567890"
               />
             </div>
             
             <div>
-              <Label htmlFor={`contact-relationship-${index}`}>Relación</Label>
+              <Label htmlFor={`contact-relationship-${contact.id}`}>Relación</Label>
               <Input
-                id={`contact-relationship-${index}`}
+                id={`contact-relationship-${contact.id}`}
                 value={contact.relationship}
-                onChange={(e) => updateContact(index, 'relationship', e.target.value)}
+                onChange={(e) => updateContact(contact.id, 'relationship', e.target.value)}
                 placeholder="Padre, Madre, Tutor, etc."
               />
             </div>
@@ -192,18 +205,18 @@ function EmergencyContactForm({ contacts, onChange }: EmergencyContactFormProps)
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Switch
-                  id={`contact-primary-${index}`}
+                  id={`contact-primary-${contact.id}`}
                   checked={contact.is_primary}
-                  onCheckedChange={(checked) => updateContact(index, 'is_primary', checked)}
+                  onCheckedChange={(checked) => updateContact(contact.id, 'is_primary', checked)}
                 />
-                <Label htmlFor={`contact-primary-${index}`}>Contacto Principal</Label>
+                <Label htmlFor={`contact-primary-${contact.id}`}>Contacto Principal</Label>
               </div>
               
               <Button
                 type="button"
                 variant="destructive"
                 size="sm"
-                onClick={() => removeContact(index)}
+                onClick={() => removeContact(contact.id)}
               >
                 <TrashIcon className="h-4 w-4" />
               </Button>
@@ -635,9 +648,7 @@ export default function ChildForm({ child, mode, onSuccess, onCancel }: ChildFor
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       
-      await uploadFile('avatars', fileName, file);
-      const url = getPublicUrl('avatars', fileName);
-      
+      const { url } = await uploadFile('AVATARS' as keyof typeof STORAGE_BUCKETS, file, fileName);    
       form.setValue('avatar_url', url);
     } catch (error) {
       console.error('Error uploading avatar:', error);
