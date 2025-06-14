@@ -166,7 +166,7 @@ function AccessibleChildren({ children, loading }: AccessibleChildrenProps) {
     return (
       <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {[...Array(3)].map((_, index) => (
-          <Card key={`accessible-child-skeleton-${index}`} className="animate-pulse">
+          <Card key={`accessible-child-skeleton-${Date.now()}-${index}`} className="animate-pulse">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <Skeleton className="h-12 w-12 sm:h-16 sm:w-16 rounded-full" />
@@ -299,7 +299,7 @@ function RecentLogs({ logs, loading }: RecentLogsProps) {
     return (
       <div className="space-y-3 sm:space-y-4">
         {[...Array(3)].map((_, index) => (
-          <div key={`recent-log-skeleton-${index}`} className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg border bg-white animate-pulse">
+          <div key={`recent-log-skeleton-${Date.now()}-${index}`} className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg border bg-white animate-pulse">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-3/4" />
