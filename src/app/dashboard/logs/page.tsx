@@ -757,7 +757,7 @@ export default function LogsPage() {
           <div className="space-y-4">
             {filteredLogs.map((log) => (
               <LogCard
-                key={log.id}
+                key={`log-${log.id}`}
                 log={log}
                 onEdit={handleEdit}
                 onViewDetails={handleViewDetails}
