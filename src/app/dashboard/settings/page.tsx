@@ -13,7 +13,6 @@ import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useToast } from '@/components/ui/use-toast'
 import { 
-  Settings, 
   User, 
   Bell, 
   Shield, 
@@ -25,15 +24,30 @@ import {
 } from 'lucide-react'
 
 export default function SettingsPage() {
+  // Función auxiliar para obtener la etiqueta del rol
+  const getRoleLabel = (role: string): string => {
+    switch (role) {
+      case 'parent': return 'Padre/Madre';
+      case 'teacher': return 'Docente';
+      case 'specialist': return 'Especialista';
+      case 'admin': return 'Administrador';
+      default: return 'Usuario';
+    }
+  }
+
   // ✅ CORREGIDO: Usar 'user' en lugar de 'profile'
   const { user, updateProfile, refreshUser, loading: authLoading } = useAuth()
   const { toast } = useToast()
   
   // ✅ Estado del perfil inicializado correctamente desde el usuario
-  const [profileData, setProfileData] = useState({
+  const [profileData, setProfileData] = useState<{
+    full_name: string;
+    email: string;
+    role: 'parent' | 'teacher' | 'specialist' | 'admin';
+  }>({
     full_name: '',
     email: '',
-    role: 'parent' as const
+    role: 'parent'
   })
 
   const [preferences, setPreferences] = useState({
@@ -186,10 +200,7 @@ export default function SettingsPage() {
               </p>
               <p className="text-sm text-gray-600">{user.email}</p>
               <p className="text-xs text-blue-600 capitalize">
-                {user.role === 'parent' ? 'Padre/Madre' :
-                 user.role === 'teacher' ? 'Docente' :
-                 user.role === 'specialist' ? 'Especialista' : 
-                 user.role === 'admin' ? 'Administrador' : 'Usuario'}
+                {getRoleLabel(user.role)}
               </p>
             </div>
           </div>
