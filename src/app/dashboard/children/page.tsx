@@ -198,7 +198,7 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
             <Input
               id="search"
               placeholder="Nombre o diagnóstico"
-              value={filters.search || ''}
+              value={filters.search ?? ''}
               onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
             />
           </div>
@@ -209,7 +209,7 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
             <Select
               value={filters.is_active?.toString() ?? ''}
               onValueChange={(value) => 
-                onFiltersChange({ ...filters, is_active: value === 'true' ? true : false })
+                onFiltersChange({ ...filters, is_active: value === 'true' })
               }
             >
               <SelectTrigger>
