@@ -102,17 +102,22 @@ export default function NewChildPage() {
         ...formData,
         name: formData.name.trim(),
         emergency_contact: emergencyContacts,
-        birth_date: formData.birth_date || null,
-        diagnosis: formData.diagnosis || null,
-        notes: formData.notes || null
+        birth_date: formData.birth_date ?? null,
+        diagnosis: formData.diagnosis ?? null,
+        notes: formData.notes ?? null
       });
       
       // Redirigir a la lista de niños
       router.push('/dashboard/children');
     } catch (error) {
       console.error('Error creating child:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : typeof error === 'string' 
+          ? error 
+          : 'Error al crear el niño';
       setErrors({ 
-        submit: error instanceof Error ? error.message : 'Error al crear el niño' 
+        submit: errorMessage 
       });
     }
   };
