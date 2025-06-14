@@ -202,6 +202,19 @@ export interface CategoryInsert {
 }
 
 // ================================================================
+// ATTACHMENT TYPES
+// ================================================================
+
+export interface LogAttachment {
+  id: string;
+  url: string;
+  name: string;
+  type: 'image' | 'document' | 'audio' | 'video';
+  size: number;
+  uploaded_at: string;
+}
+
+// ================================================================
 // DAILY LOG TYPES
 // ================================================================
 

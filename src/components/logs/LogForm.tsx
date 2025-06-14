@@ -35,24 +35,20 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useChildren } from '@/hooks/use-children';
 import { useLogs } from '@/hooks/use-logs';
-import { supabase, uploadFile, getPublicUrl, STORAGE_BUCKETS } from '@/lib/supabase';
+import { createClient, uploadFile, getPublicUrl } from '@/lib/supabase';
+const supabase = createClient();
 import type { 
   DailyLog, 
   LogInsert, 
   LogUpdate, 
-  Category, 
-  IntensityLevel,
+  Category,
   LogAttachment,
-  ChildWithRelation
 } from '@/types';
 import { 
-  CalendarIcon, 
   ImageIcon, 
   PlusIcon, 
   TrashIcon, 
   SaveIcon,
-  HeartIcon,
-  AlertTriangleIcon,
   EyeIcon,
   EyeOffIcon,
   TagIcon,
@@ -63,7 +59,6 @@ import {
   UploadIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 // ================================================================
 // ESQUEMAS DE VALIDACIÓN
@@ -88,7 +83,8 @@ const logFormSchema = z.object({
     name: z.string(),
     url: z.string(),
     type: z.enum(['image', 'video', 'audio', 'document']),
-    size: z.number()
+    size: z.number(),
+    uploaded_at: z.string()
   })).default([])
 }).refine((data) => {
   // Si requiere seguimiento, debe tener fecha
@@ -199,23 +195,20 @@ function AttachmentsManager({ attachments, onChange, childId }: AttachmentsManag
       const newAttachments: LogAttachment[] = [];
 
       for (const file of Array.from(files)) {
-        const fileExt = file.name.split('.').pop();
         const fileName = `${childId}/${Date.now()}-${file.name}`;
         
-        await uploadFile('attachments', fileName, file);
-        const url = getPublicUrl('attachments', fileName);
+        await uploadFile('ATTACHMENTS', file, fileName);
+        const url = getPublicUrl('ATTACHMENTS', fileName);
         
         let type: LogAttachment['type'] = 'document';
         if (file.type.startsWith('image/')) type = 'image';
-        else if (file.type.startsWith('video/')) type = 'video';
-        else if (file.type.startsWith('audio/')) type = 'audio';
-        
         newAttachments.push({
           id: `${Date.now()}-${Math.random()}`,
           name: file.name,
           url,
           type,
-          size: file.size
+          size: file.size,
+          uploaded_at: new Date().toISOString()
         });
       }
 
@@ -242,8 +235,7 @@ function AttachmentsManager({ attachments, onChange, childId }: AttachmentsManag
   const getFileIcon = (type: LogAttachment['type']) => {
     switch (type) {
       case 'image': return ImageIcon;
-      case 'video': return FileIcon;
-      case 'audio': return FileIcon;
+      case 'document': return FileIcon;
       default: return FileIcon;
     }
   };
@@ -394,11 +386,9 @@ function TagsInput({ tags, onChange }: TagsInputProps) {
 // ================================================================
 
 export default function LogForm({ log, childId, mode, onSuccess, onCancel }: LogFormProps) {
-  const { user } = useAuth();
   const { children } = useChildren();
   const { createLog, updateLog } = useLogs();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
   const router = useRouter();
 
   const form = useForm<LogFormData>({
@@ -417,7 +407,10 @@ export default function LogForm({ log, childId, mode, onSuccess, onCancel }: Log
       weather: log?.weather || '',
       follow_up_required: log?.follow_up_required || false,
       follow_up_date: log?.follow_up_date || '',
-      attachments: log?.attachments || []
+      attachments: log?.attachments ? log.attachments.map(att => ({
+        ...att,
+        uploaded_at: att.uploaded_at || new Date().toISOString()
+      })) : []
     }
   });
 
@@ -435,8 +428,6 @@ export default function LogForm({ log, childId, mode, onSuccess, onCancel }: Log
         setCategories(data || []);
       } catch (error) {
         console.error('Error fetching categories:', error);
-      } finally {
-        setLoadingCategories(false);
       }
     }
 
@@ -527,7 +518,7 @@ export default function LogForm({ log, childId, mode, onSuccess, onCancel }: Log
                           <SelectItem key={child.id} value={child.id}>
                             <div className="flex items-center space-x-2">
                               <Avatar className="h-6 w-6">
-                                <AvatarImage src={child.avatar_url} />
+                                <AvatarImage src={child.avatar_url || ''} />
                                 <AvatarFallback className="text-xs">
                                   {child.name.charAt(0)}
                                 </AvatarFallback>
@@ -547,7 +538,7 @@ export default function LogForm({ log, childId, mode, onSuccess, onCancel }: Log
               {selectedChild && (
                 <div className="p-4 bg-blue-50 rounded-lg flex items-center space-x-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={selectedChild.avatar_url} />
+                    <AvatarImage src={selectedChild.avatar_url || ''} />
                     <AvatarFallback className="bg-blue-200 text-blue-700">
                       {selectedChild.name.charAt(0)}
                     </AvatarFallback>
