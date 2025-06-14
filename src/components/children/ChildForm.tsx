@@ -129,7 +129,7 @@ interface PrivacySettingsFormProps {
 
 function EmergencyContactForm({ contacts, onChange }: EmergencyContactFormProps) {
   const generateUniqueId = () => {
-    return `contact-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `contact-${crypto.randomUUID()}`;
   };
 
   const addContact = () => {
