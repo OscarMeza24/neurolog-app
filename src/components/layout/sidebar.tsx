@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useLogs } from '@/hooks/use-logs';
 import {
@@ -23,9 +22,7 @@ import {
   Menu,
   X,
   LogOut,
-  Bell,
   Shield,
-  FileText,
   Calendar,
   Download,
   HelpCircle,
@@ -209,7 +206,7 @@ export function Sidebar() {
         <div className="p-4 lg:p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <Avatar className="h-10 w-10 ring-2 ring-blue-100">
-              <AvatarImage src={user?.avatar_url} alt={user?.full_name} />
+              <AvatarImage src={user?.avatar_url ?? ''} alt={user?.full_name ?? ''} />
               <AvatarFallback className="bg-gradient-to-br from-blue-100 to-purple-100 text-blue-700 font-semibold">
                 {user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
               </AvatarFallback>
