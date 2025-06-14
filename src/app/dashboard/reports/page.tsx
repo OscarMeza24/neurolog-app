@@ -230,10 +230,11 @@ export default function ReportsPage() {
             </div>
             
             <div>
-              <label className="text-sm font-medium mb-2 block">Período</label>
+              <Label>Período</Label>
               <DatePickerWithRange 
                 date={dateRange}
                 setDate={setDateRange}
+                className="w-full"
               />
             </div>
 
