@@ -194,8 +194,9 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
         <div className="space-y-4">
           {/* Búsqueda */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Buscar</label>
+            <label htmlFor="search" className="text-sm font-medium">Buscar</label>
             <Input
+              id="search"
               placeholder="Nombre o diagnóstico"
               value={filters.search || ''}
               onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
@@ -204,7 +205,7 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
 
           {/* Estado */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Estado</label>
+            <label htmlFor="is_active" className="text-sm font-medium">Estado</label>
             <Select
               value={filters.is_active?.toString() || ''}
               onValueChange={(value) => 
@@ -223,7 +224,7 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
 
           {/* Tipo de relación */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo de relación</label>
+            <label htmlFor="relationship_type" className="text-sm font-medium">Tipo de relación</label>
             <Select
               value={filters.relationship_type || ''}
               onValueChange={(value) => onFiltersChange({ ...filters, relationship_type: value as RelationshipType })}
@@ -244,8 +245,9 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
 
           {/* Rango de edad */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Edad máxima</label>
+            <label htmlFor="max_age" className="text-sm font-medium">Edad máxima</label>
             <Input
+              id="max_age"
               type="number"
               placeholder="Años"
               min="0"
