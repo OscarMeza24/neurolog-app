@@ -386,14 +386,12 @@ function FiltersBar({ filters, onFiltersChange, children, totalCount, filteredCo
             <SelectContent>
               <SelectItem value="all">Todos los niños</SelectItem>
               {children.map((child) => (
-                <SelectItem key={`child-${child.id}`} value={child.id}>
+                <SelectItem key={child.id} value={child.id}>
                   {child.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-
-          {/* Date Range */}
           <Input
             type="date"
             placeholder="Desde"
@@ -582,7 +580,7 @@ export default function LogsPage() {
         
         <div className="space-y-4">
           {Array.from({ length: 5 }).map((_, index) => (
-            <Card key={`skeleton-${index}`} className="p-6">
+            <Card key={`skeleton-${index}-${Date.now()}`} className="p-6">
               <div className="flex items-start space-x-4">
                 <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse" />
                 <div className="flex-1 space-y-2">
