@@ -63,11 +63,11 @@ import { es } from 'date-fns/locale';
 // ================================================================
 
 interface LogCardProps {
-  log: LogWithDetails;
-  onEdit: (log: LogWithDetails) => void;
-  onViewDetails: (log: LogWithDetails) => void;
-  onTogglePrivacy: (log: LogWithDetails) => void;
-  onAddFeedback: (log: LogWithDetails) => void;
+  readonly log: LogWithDetails;
+  readonly onEdit: (log: LogWithDetails) => void;
+  readonly onViewDetails: (log: LogWithDetails) => void;
+  readonly onTogglePrivacy: (log: LogWithDetails) => void;
+  readonly onAddFeedback: (log: LogWithDetails) => void;
 }
 
 function LogCard({ log, onEdit, onViewDetails, onTogglePrivacy, onAddFeedback }: LogCardProps) {
@@ -329,11 +329,11 @@ function LogCard({ log, onEdit, onViewDetails, onTogglePrivacy, onAddFeedback }:
 }
 
 interface FiltersBarProps {
-  filters: LogFilters;
-  onFiltersChange: (filters: LogFilters) => void;
-  children: ChildWithRelation[];
-  totalCount: number;
-  filteredCount: number;
+  readonly filters: LogFilters;
+  readonly onFiltersChange: (filters: LogFilters) => void;
+  readonly children: readonly ChildWithRelation[];
+  readonly totalCount: number;
+  readonly filteredCount: number;
 }
 
 function FiltersBar({ filters, onFiltersChange, children, totalCount, filteredCount }: FiltersBarProps) {
