@@ -106,10 +106,10 @@ export function useChildren(options: UseChildrenOptions = {}): UseChildrenReturn
       notes: child.notes,
       is_active: child.is_active!,
       avatar_url: child.avatar_url,
-      emergency_contact: child.emergency_contact || [],
-      medical_info: child.medical_info || {},
-      educational_info: child.educational_info || {},
-      privacy_settings: child.privacy_settings || {
+      emergency_contact: child.emergency_contact ?? [],
+      medical_info: child.medical_info ?? {},
+      educational_info: child.educational_info ?? {},
+      privacy_settings: child.privacy_settings ?? {
         share_with_specialists: true,
         share_progress_reports: true,
         allow_photo_sharing: false,

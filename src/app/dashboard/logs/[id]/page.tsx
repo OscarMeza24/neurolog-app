@@ -277,7 +277,7 @@ export default function LogDetailPage() {
                   <div>
                     <CardTitle className="text-lg">{log.category?.name || 'Sin categoría'}</CardTitle>
                     <CardDescription>
-                      Registrado por {log.logged_by_profile.full_name}
+                      Registrado por {log.logged_by_profile?.full_name ?? 'Usuario desconocido'}
                     </CardDescription>
                   </div>
                 </div>
@@ -384,7 +384,7 @@ export default function LogDetailPage() {
                     <h4 className="text-sm font-medium text-green-900">Revisado por especialista</h4>
                   </div>
                   <p className="text-sm text-green-700 mt-1">
-                    Revisado por {log.logged_by_profile?.full_name || 'Usuario desconocido'} el {format(new Date(log.reviewed_at!), 'dd MMM yyyy', { locale: es })}
+                    Revisado por {log.logged_by_profile?.full_name ?? 'Usuario desconocido'} el {format(new Date(log.reviewed_at!), 'dd MMM yyyy', { locale: es })}
                   </p>
                   {log.specialist_notes && (
                     <div className="mt-3">
