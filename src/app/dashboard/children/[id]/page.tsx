@@ -101,6 +101,25 @@ export default function ChildDetailPage() {
   };
 
   // Estadísticas del niño
+  // Función auxiliar para obtener el estado del registro
+  const getLogStatusVariant = (log: LogWithDetails): 'destructive' | 'secondary' => {
+    if (log.follow_up_required && !log.follow_up_date) {
+      return 'destructive';
+    }
+    return 'secondary';
+  };
+
+  // Función auxiliar para obtener el texto del estado del registro
+  const getLogStatusText = (log: LogWithDetails): string => {
+    if (log.follow_up_required && !log.follow_up_date) {
+      return 'Seguimiento pendiente';
+    }
+    if (log.reviewer_name) {
+      return 'Revisado';
+    }
+    return 'Sin revisar';
+  };
+
   const childStats = {
     totalLogs: logs.length,
     logsThisWeek: logs.filter(log => new Date(log.created_at) > subWeeks(new Date(), 1)).length,
@@ -397,14 +416,10 @@ export default function ChildDetailPage() {
                                   </p>
                                 </div>
                                 <Badge
-                                  variant={log.follow_up_required && !log.follow_up_date ? "destructive" : "secondary"}
+                                  variant={getLogStatusVariant(log)}
                                   className="text-xs"
                                 >
-                                  {log.follow_up_required && !log.follow_up_date 
-                                    ? 'Seguimiento pendiente'
-                                    : log.reviewer_name 
-                                    ? 'Revisado'
-                                    : 'Sin revisar'}
+                                  {getLogStatusText(log)}
                                 </Badge>
                               </div>
                               <p className="text-sm text-gray-600 line-clamp-2">
