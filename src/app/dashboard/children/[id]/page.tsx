@@ -25,7 +25,8 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useChildren } from '@/hooks/use-children';
 import { useLogs } from '@/hooks/use-logs';
 import type { 
-  ChildWithRelation
+  ChildWithRelation,
+  LogWithDetails
 } from '@/types';
 import { 
   EditIcon,
@@ -40,7 +41,8 @@ import {
   AlertCircleIcon,
   GraduationCapIcon,
   ClockIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  EyeIcon
 } from 'lucide-react';
 import { format, differenceInYears, subMonths, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -344,8 +346,100 @@ export default function ChildDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* TODO: Implementar lista detallada de logs con filtros */}
-              <p className="text-gray-500">Vista detallada de registros próximamente...</p>
+              <div className="space-y-4">
+                {/* Filtros de registros */}
+                <div className="flex items-center justify-between space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      Últimos 7 días
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      Último mes
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      Último año
+                    </Button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm">
+                      <DownloadIcon className="h-4 w-4 mr-2" />
+                      Exportar
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <PlusIcon className="h-4 w-4 mr-2" />
+                      Nuevo registro
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Lista de registros */}
+                {logs.length === 0 ? (
+                  <div className="flex items-center justify-center h-32">
+                    <p className="text-gray-500">No hay registros aún</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {logs.map((log: LogWithDetails) => (
+                      <Card key={log.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-900">
+                                    {log.title || 'Registro sin título'}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    {format(new Date(log.log_date), 'dd MMM yyyy HH:mm', { locale: es })}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant={log.follow_up_required && !log.follow_up_date ? "destructive" : "secondary"}
+                                  className="text-xs"
+                                >
+                                  {log.follow_up_required && !log.follow_up_date 
+                                    ? 'Seguimiento pendiente'
+                                    : log.reviewer_name 
+                                    ? 'Revisado'
+                                    : 'Sin revisar'}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-gray-600 line-clamp-2">
+                                {log.content || 'Sin descripción'}
+                              </p>
+                              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                <span>
+                                  <UserPlusIcon className="h-4 w-4 inline-block mr-1" />
+                                  {log.logged_by_profile?.full_name || 'Usuario desconocido'}
+                                </span>
+                                {log.reviewer_name && (
+                                  <span>
+                                    <EyeIcon className="h-4 w-4 inline-block mr-1" />
+                                    Revisado por {log.reviewer_name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button variant="outline" size="sm">
+                                <EditIcon className="h-4 w-4 mr-2" />
+                                Editar
+                              </Button>
+                              <Button variant="outline" size="sm">
+                                <AlertCircleIcon className="h-4 w-4 mr-2" />
+                                Eliminar
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
