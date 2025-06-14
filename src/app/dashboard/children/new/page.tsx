@@ -111,11 +111,14 @@ export default function NewChildPage() {
       router.push('/dashboard/children');
     } catch (error) {
       console.error('Error creating child:', error);
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : typeof error === 'string' 
-          ? error 
-          : 'Error al crear el niño';
+      let errorMessage: string;
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else {
+        errorMessage = 'Error al crear el niño';
+      }
       setErrors({ 
         submit: errorMessage 
       });

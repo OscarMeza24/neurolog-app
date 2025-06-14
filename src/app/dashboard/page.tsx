@@ -99,8 +99,8 @@ function QuickStats({ stats, loading }: QuickStatsProps) {
   if (loading) {
     return (
       <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={`quickstat-skeleton-${i}`} className="animate-pulse">
+        {[...Array(4)].map((_, index) => (
+          <Card key={`quickstat-card-skeleton-${index}`} className="animate-pulse">
             <CardContent className="p-3 sm:p-4 md:p-6">
               <div className="flex items-center justify-between space-x-2">
                 <div className="space-y-2 flex-1">
@@ -120,7 +120,7 @@ function QuickStats({ stats, loading }: QuickStatsProps) {
   return (
     <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-4">
       {statCards.map((stat, index) => (
-        <Card key={index} className={`hover:shadow-md transition-all duration-200 ${stat.borderColor} border-l-4`}>
+        <Card key={`quickstat-card-${stat.title.toLowerCase().replace(' ', '-')}-${index}`} className={`hover:shadow-md transition-all duration-200 ${stat.borderColor} border-l-4`}>
           <CardContent className="p-3 sm:p-4 md:p-6">
             <div className="flex items-center justify-between space-x-2">
               <div className="space-y-1 sm:space-y-2 flex-1 min-w-0">
@@ -156,11 +156,17 @@ function QuickStats({ stats, loading }: QuickStatsProps) {
 // ================================================================
 
 function AccessibleChildren({ children, loading }: AccessibleChildrenProps) {
+  const getProgressColor = (weeklyLogs: number | undefined): string => {
+    const logs = weeklyLogs || 0;
+    if (logs >= 5) return 'bg-green-500';
+    if (logs >= 3) return 'bg-yellow-500';
+    return 'bg-red-500';
+  }
   if (loading) {
     return (
       <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {[...Array(3)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
+        {[...Array(3)].map((_, index) => (
+          <Card key={`accessible-child-skeleton-${index}`} className="animate-pulse">
             <CardContent className="p-4 sm:p-6">
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <Skeleton className="h-12 w-12 sm:h-16 sm:w-16 rounded-full" />
@@ -255,10 +261,7 @@ function AccessibleChildren({ children, loading }: AccessibleChildrenProps) {
                 <Progress 
                   value={((child.weekly_logs || 0) / 7) * 100} 
                   className="h-2"
-                  indicatorClassName={
-                    (child.weekly_logs || 0) >= 5 ? "bg-green-500" :
-                    (child.weekly_logs || 0) >= 3 ? "bg-yellow-500" : "bg-red-500"
-                  }
+                  indicatorClassName={getProgressColor(child.weekly_logs)}
                 />
               </div>
             </CardContent>
@@ -285,11 +288,18 @@ function AccessibleChildren({ children, loading }: AccessibleChildrenProps) {
 // ================================================================
 
 function RecentLogs({ logs, loading }: RecentLogsProps) {
+  const formatDate = (date: string): string => {
+    const logDate = new Date(date);
+    if (isToday(logDate)) return 'Hoy';
+    if (isYesterday(logDate)) return 'Ayer';
+    return format(logDate, 'dd MMM', { locale: es });
+  };
+
   if (loading) {
     return (
       <div className="space-y-3 sm:space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg border bg-white animate-pulse">
+        {[...Array(3)].map((_, index) => (
+          <div key={`recent-log-skeleton-${index}`} className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4 rounded-lg border bg-white animate-pulse">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-3/4" />
@@ -365,9 +375,7 @@ function RecentLogs({ logs, loading }: RecentLogsProps) {
                 <span className="font-medium">{log.child_name}</span>
                 <span className="mx-1">•</span>
                 <span>
-                  {isToday(new Date(log.created_at)) ? 'Hoy' :
-                   isYesterday(new Date(log.created_at)) ? 'Ayer' :
-                   format(new Date(log.created_at), 'dd MMM', { locale: es })}
+                  {formatDate(log.created_at)}
                 </span>
               </div>
               
