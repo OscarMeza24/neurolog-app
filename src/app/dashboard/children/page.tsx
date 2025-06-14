@@ -274,11 +274,13 @@ function ChildrenList({
   handleManageUsers,
   onFiltersChange
 }: ChildrenListProps) {
+  const skeletonId = 'children-list-skeleton';
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
-          <Card key={`skeleton-child-${Date.now()}-${i}`} className="animate-pulse">
+          <Card key={`${skeletonId}-${i}`} className="animate-pulse">
             <CardHeader>
               <div className="flex items-center space-x-4">
                 <div className="rounded-full bg-gray-200 h-12 w-12"></div>
