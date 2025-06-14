@@ -441,10 +441,10 @@ function FiltersBar({ filters, onFiltersChange, children, totalCount, filteredCo
               <SelectValue placeholder="Intensidad" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas las intensidades</SelectItem>
-              <SelectItem value="low">Baja</SelectItem>
-              <SelectItem value="medium">Media</SelectItem>
-              <SelectItem value="high">Alta</SelectItem>
+              <SelectItem value="all" key="intensity-all">Todas las intensidades</SelectItem>
+              <SelectItem value="low" key="intensity-low">Baja</SelectItem>
+              <SelectItem value="medium" key="intensity-medium">Media</SelectItem>
+              <SelectItem value="high" key="intensity-high">Alta</SelectItem>
             </SelectContent>
           </Select>
 
@@ -486,9 +486,9 @@ function FiltersBar({ filters, onFiltersChange, children, totalCount, filteredCo
               <SelectValue placeholder="Privacidad" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="false">Públicos</SelectItem>
-              <SelectItem value="true">Privados</SelectItem>
+              <SelectItem value="all" key="privacy-all">Todos</SelectItem>
+              <SelectItem value="false" key="privacy-false">Públicos</SelectItem>
+              <SelectItem value="true" key="privacy-true">Privados</SelectItem>
             </SelectContent>
           </Select>
 
@@ -504,9 +504,9 @@ function FiltersBar({ filters, onFiltersChange, children, totalCount, filteredCo
               <SelectValue placeholder="Seguimiento" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="required">Con seguimiento</SelectItem>
-              <SelectItem value="completed">Sin seguimiento</SelectItem>
+              <SelectItem value="all" key="followup-all">Todos</SelectItem>
+              <SelectItem value="required" key="followup-required">Con seguimiento</SelectItem>
+              <SelectItem value="completed" key="followup-completed">Sin seguimiento</SelectItem>
             </SelectContent>
           </Select>
         </div>
