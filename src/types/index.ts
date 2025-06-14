@@ -265,6 +265,9 @@ export interface LogUpdate {
   parent_feedback?: string | null;
   follow_up_required?: boolean;
   follow_up_date?: string | null;
+  reviewed?: boolean;
+  reviewed_at?: string;
+  reviewed_by?: string;
 }
 
 // Tipo combinado para logs con información detallada

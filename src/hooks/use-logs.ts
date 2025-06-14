@@ -142,81 +142,105 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsReturn {
         setLoading(true);
         setError(null);
       }
-
       console.log(`📊 Fetching logs - Page: ${page}, Append: ${append}`);
-      
+
       // Obtener niños accesibles
       const accessibleChildrenIds = await getAccessibleChildrenIds();
       if (accessibleChildrenIds.length === 0) {
-        if (mountedRef.current) {
-          setLogs([]);
-          setHasMore(false);
-          setLoading(false);
-        }
+        handleNoChildrenAccess();
         return;
       }
 
-      // Query base
-      let query = supabase
-        .from('daily_logs')
-        .select(`
-          *,
-          child:children!inner(id, name, avatar_url),
-          category:categories(id, name, color, icon),
-          logged_by_profile:profiles!daily_logs_logged_by_fkey(id, full_name, avatar_url)
-        `)
-        .in('child_id', accessibleChildrenIds)
-        .eq('is_active', !includeDeleted)
-        .order('created_at', { ascending: false })
-        .range(page * pageSize, (page + 1) * pageSize - 1);
-
-      // Filtrar por niño específico si se proporciona
-      if (childId) {
-        if (!accessibleChildrenIds.includes(childId)) {
-          throw new Error('No tienes acceso a este niño');
-        }
-        query = query.eq('child_id', childId);
-      }
-
-      // Filtrar por privacidad
-      if (!includePrivate) {
-        query = query.eq('is_private', false);
-      }
-
-      const { data, error } = await query;
+      // Preparar consulta
+      const query = prepareLogQuery(accessibleChildrenIds, page);
       
-      if (error) throw error;
-
-      const newLogs = (data || []).map(log => ({
-        ...log,
-        child: log.child || { id: log.child_id, name: 'Niño desconocido', avatar_url: null },
-        category: log.category || { id: '', name: 'Sin categoría', color: '#gray', icon: 'circle' },
-        logged_by_profile: log.logged_by_profile || { id: log.logged_by, full_name: 'Usuario desconocido', avatar_url: null }
-      })) as LogWithDetails[];
-
-      if (mountedRef.current) {
-        if (append) {
-          setLogs(prev => [...prev, ...newLogs]);
-        } else {
-          setLogs(newLogs);
-        }
-        
-        setHasMore(newLogs.length === pageSize);
-        console.log(`✅ Logs fetched successfully: ${newLogs.length}`);
-      }
-
+      // Ejecutar y procesar resultados
+      await executeAndProcessLogs(query, append);
     } catch (err) {
-      console.error('❌ Error fetching logs:', err);
-      if (mountedRef.current) {
-        const errorMessage = err instanceof Error ? err.message : 'Error al cargar los registros';
-        setError(errorMessage);
-      }
+      handleError(err);
     } finally {
-      if (mountedRef.current && !append) {
-        setLoading(false);
-      }
+      handleFinally(append);
     }
   }, [userId, childId, includePrivate, includeDeleted, pageSize, getAccessibleChildrenIds, supabase]);
+
+  // Funciones auxiliares
+  const handleNoChildrenAccess = () => {
+    if (mountedRef.current) {
+      setLogs([]);
+      setHasMore(false);
+      setLoading(false);
+    }
+  };
+
+  const prepareLogQuery = (accessibleChildrenIds: string[], page: number) => {
+    let query = supabase
+      .from('daily_logs')
+      .select(`
+        *,
+        child:children!inner(id, name, avatar_url),
+        category:categories(id, name, color, icon),
+        logged_by_profile:profiles!daily_logs_logged_by_fkey(id, full_name, avatar_url)
+      `)
+      .in('child_id', accessibleChildrenIds)
+      .eq('is_active', !includeDeleted)
+      .order('created_at', { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+
+    if (childId) {
+      validateChildAccess(childId, accessibleChildrenIds);
+      query = query.eq('child_id', childId);
+    }
+
+    if (!includePrivate) {
+      query = query.eq('is_private', false);
+    }
+
+    return query;
+  };
+
+  const validateChildAccess = (childId: string, accessibleChildrenIds: string[]) => {
+    if (!accessibleChildrenIds.includes(childId)) {
+      throw new Error('No tienes acceso a este niño');
+    }
+  };
+
+  const executeAndProcessLogs = async (query: any, append: boolean) => {
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const newLogs = (data || []).map((log: any) => ({
+      ...log,
+      child: log.child || { id: log.child_id, name: 'Niño desconocido', avatar_url: null },
+      category: log.category || { id: '', name: 'Sin categoría', color: '#gray', icon: 'circle' },
+      logged_by_profile: log.logged_by_profile || { id: log.logged_by, full_name: 'Usuario desconocido', avatar_url: null }
+    })) as LogWithDetails[];
+
+    if (mountedRef.current) {
+      updateLogsState(newLogs, append);
+    }
+  };
+
+  const updateLogsState = (newLogs: LogWithDetails[], append: boolean) => {
+    if (mountedRef.current) {
+      setLogs(prev => append ? [...prev, ...newLogs] : newLogs);
+      setHasMore(newLogs.length === pageSize);
+      console.log(`✅ Logs fetched successfully: ${newLogs.length}`);
+    }
+  };
+
+  const handleError = (err: any) => {
+    if (mountedRef.current) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al cargar los registros';
+      setError(errorMessage);
+      console.error('❌ Error fetching logs:', err);
+    }
+  };
+
+  const handleFinally = (append: boolean) => {
+    if (mountedRef.current && !append) {
+      setLoading(false);
+    }
+  };
 
   const fetchStats = useCallback(async (): Promise<void> => {
     if (!userId) return;
@@ -407,7 +431,7 @@ export function useLogs(options: UseLogsOptions = {}): UseLogsReturn {
 
   const markAsReviewed = useCallback(async (id: string, specialistNotes?: string): Promise<void> => {
     await updateLog(id, {
-      needs_review: false,
+      reviewed: true,
       reviewed_at: new Date().toISOString(),
       reviewed_by: userId,
       specialist_notes: specialistNotes
