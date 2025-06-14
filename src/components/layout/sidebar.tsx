@@ -213,7 +213,7 @@ export function Sidebar() {
             </Avatar>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.full_name || 'Usuario'}
+                {user?.full_name ?? 'Usuario'}
               </p>
               <p className="text-xs text-gray-500 capitalize">
                 {user?.role === 'parent' ? 'Padre/Madre' :
