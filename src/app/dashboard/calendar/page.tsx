@@ -11,6 +11,12 @@ import { Calendar as CalendarIcon, Plus, Clock, Users, ChevronLeft, ChevronRight
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+function getRandomBoolean() {
+  const randomBytes = new Uint8Array(1);
+  crypto.getRandomValues(randomBytes);
+  return randomBytes[0] > 127;
+}
+
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -115,7 +121,7 @@ export default function CalendarPage() {
               >
                 {format(day, 'd')}
                 {/* Placeholder for events */}
-                {Math.random() > 0.8 && (
+                {getRandomBoolean() && (
                   <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-500 rounded-full"></div>
                 )}
               </div>
