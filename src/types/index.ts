@@ -287,7 +287,10 @@ export interface LogWithDetails extends DailyLog {
     id: string;
     full_name: string;
     avatar_url?: string | null;
-  };
+  }
+  can_edit: boolean;  // Permisos de edición del log;
+  reviewer_name?: string;  // Nombre completo del revisor
+  reviewed_by?: string;  // ID del revisor;
 }
 
 // ================================================================

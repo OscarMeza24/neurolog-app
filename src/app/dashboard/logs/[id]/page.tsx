@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,20 +29,17 @@ import {
   EditIcon,
   MoreVerticalIcon,
   CalendarIcon,
-  HeartIcon,
   MapPinIcon,
   CloudIcon,
   FileIcon,
   MessageSquareIcon,
   AlertCircleIcon,
   CheckCircleIcon,
-  EyeIcon,
   EyeOffIcon,
   ClockIcon,
   ArrowLeftIcon,
   UserIcon,
   TagIcon,
-  ThermometerIcon,
   ReplyIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -52,26 +49,63 @@ export default function LogDetailPage() {
   const params = useParams();
   const router = useRouter();
   const logId = params.id as string;
+  const { 
+    getLogById, 
+    addParentFeedback, 
+    markAsReviewed,
+    canEditLog 
+  } = useLogs();
   const { user } = useAuth();
-  const { logs, loading, getLogById, addParentFeedback, markAsReviewed } = useLogs();
   
   const [log, setLog] = useState<LogWithDetails | null>(null);
   const [feedback, setFeedback] = useState('');
   const [specialistNotes, setSpecialistNotes] = useState('');
   const [isAddingFeedback, setIsAddingFeedback] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (logId && !loading) {
-      const foundLog = getLogById(logId);
-      setLog(foundLog || null);
+    if (!logId) {
+      setError('ID de registro no válido');
+      setIsLoading(false);
+      return;
     }
-  }, [logId, loading, getLogById]);
 
-  if (loading) {
+    const loadLog = async () => {
+      try {
+        const foundLog = getLogById(logId);
+        if (!foundLog) {
+          setError('Registro no encontrado');
+        }
+        setLog(foundLog || null);
+      } catch (err) {
+        setError('Error al cargar el registro');
+        console.error('Error loading log:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadLog();
+  }, [logId, getLogById]);
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-xl font-semibold text-red-900">Error</h2>
+        <p className="text-red-600 mt-2">{error}</p>
+        <Button asChild className="mt-4">
+          <Link href="/dashboard/logs">Volver a registros</Link>
+        </Button>
       </div>
     );
   }
@@ -105,9 +139,14 @@ export default function LogDetailPage() {
   };
 
   const handleAddFeedback = async () => {
-    if (!feedback.trim()) return;
+    if (!feedback.trim()) {
+      setError('El comentario no puede estar vacío');
+      return;
+    }
     
     try {
+      setIsLoading(true);
+      setError(null);
       await addParentFeedback(log.id, feedback);
       setFeedback('');
       setIsAddingFeedback(false);
@@ -115,12 +154,22 @@ export default function LogDetailPage() {
       const updatedLog = getLogById(logId);
       setLog(updatedLog || null);
     } catch (error) {
+      setError('Error al agregar el comentario');
       console.error('Error adding feedback:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleMarkAsReviewed = async () => {
+    if (!specialistNotes.trim()) {
+      setError('Las notas del especialista no pueden estar vacías');
+      return;
+    }
+    
     try {
+      setIsLoading(true);
+      setError(null);
       await markAsReviewed(log.id, specialistNotes);
       setSpecialistNotes('');
       setIsReviewing(false);
@@ -128,12 +177,27 @@ export default function LogDetailPage() {
       const updatedLog = getLogById(logId);
       setLog(updatedLog || null);
     } catch (error) {
+      setError('Error al marcar como revisado');
       console.error('Error marking as reviewed:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const canReview = user?.role === 'specialist' && !log.reviewed_by;
-  const canAddFeedback = user?.role === 'parent' || user?.role === 'family';
+  const canAddFeedback = user?.role === 'parent' || user?.role === 'teacher';
+
+  // Verificar permisos de edición usando el hook
+  const checkEditPermissions = useCallback(async () => {
+    if (log?.id) {
+      const canEdit = await canEditLog(log.id);
+      setLog(prev => prev ? { ...prev, can_edit: canEdit } : prev);
+    }
+  }, [log?.id, canEditLog]);
+
+  useEffect(() => {
+    checkEditPermissions();
+  }, [checkEditPermissions]);
 
   return (
     <div className="space-y-6">
@@ -146,7 +210,7 @@ export default function LogDetailPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Registro de {log.child_name}
+              Registro de {log.child.name}
             </h1>
             <p className="text-gray-600">
               {format(new Date(log.created_at), 'dd MMMM yyyy \'a las\' HH:mm', { locale: es })}
@@ -204,12 +268,12 @@ export default function LogDetailPage() {
                 <div className="flex items-center space-x-3">
                   <div 
                     className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: log.category_color }}
+                    style={{ backgroundColor: log.category?.color || '#gray' }}
                   />
                   <div>
-                    <CardTitle className="text-lg">{log.category_name || 'Sin categoría'}</CardTitle>
+                    <CardTitle className="text-lg">{log.category?.name || 'Sin categoría'}</CardTitle>
                     <CardDescription>
-                      Registrado por {log.logged_by_name}
+                      Registrado por {log.logged_by_profile.full_name}
                     </CardDescription>
                   </div>
                 </div>
@@ -317,7 +381,7 @@ export default function LogDetailPage() {
                     <h4 className="text-sm font-medium text-green-900">Revisado por especialista</h4>
                   </div>
                   <p className="text-sm text-green-700 mt-1">
-                    Revisado por {log.reviewer_name} el {format(new Date(log.reviewed_at!), 'dd MMM yyyy', { locale: es })}
+                    Revisado por {log.logged_by_profile?.full_name || 'Usuario desconocido'} el {format(new Date(log.reviewed_at!), 'dd MMM yyyy', { locale: es })}
                   </p>
                   {log.specialist_notes && (
                     <div className="mt-3">
@@ -425,12 +489,12 @@ export default function LogDetailPage() {
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Niño</p>
                   <div className="flex items-center space-x-2 mt-1">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={log.child_avatar_url} />
+                      <AvatarImage src={log.child.avatar_url || ''} />
                       <AvatarFallback className="text-xs">
-                        {log.child_name?.charAt(0)}
+                        {log.child.name?.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <p className="text-sm font-medium text-gray-900">{log.child_name}</p>
+                    <p className="text-sm font-medium text-gray-900">{log.child.name}</p>
                   </div>
                 </div>
 
@@ -438,12 +502,12 @@ export default function LogDetailPage() {
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Registrado por</p>
                   <div className="flex items-center space-x-2 mt-1">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={log.logged_by_avatar} />
+                      <AvatarImage src={log.logged_by_profile.avatar_url || ''} />
                       <AvatarFallback className="text-xs">
-                        {log.logged_by_name?.charAt(0)}
+                        {log.logged_by_profile.full_name?.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <p className="text-sm font-medium text-gray-900">{log.logged_by_name}</p>
+                    <p className="text-sm font-medium text-gray-900">{log.logged_by_profile.full_name}</p>
                   </div>
                 </div>
 
